@@ -1,0 +1,6 @@
+# Supabase CLI artefacts（未來引入 CLI 時用）
+.branches
+.temp
+
+# bundle-migrations.ts 產生的合併檔（derived artefact）
+_combined.sql

@@ -1,26 +1,93 @@
 @import "tailwindcss";
 
-:root {
-  --background: #ffffff;
-  --foreground: #171717;
+@theme {
+  --color-brand: #06C755;          /* LINE Green，品牌主色 */
+  --color-brand-dark: #04a045;
+  --color-brand-soft: #E8F8EE;
+  --color-money: #DC2626;
+  --color-positive: #16A34A;
+  --color-negative: #DC2626;
+
+  --font-sans: var(--font-noto-tc), system-ui, -apple-system, sans-serif;
 }
 
-@theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+/* 計程車司機族群：放大基礎字體 */
+html {
+  font-size: 17px;
+}
+@media (min-width: 768px) {
+  html { font-size: 16px; }
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
-}
+/* 大字模式 */
+html[data-font-scale="large"] { font-size: 19px; }
+html[data-font-scale="xlarge"] { font-size: 21px; }
 
-body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+body { font-family: var(--font-sans); }
+
+/* 主要按鈕：高度 ≥48px、好按、明確回饋 */
+.btn-primary {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: .5rem;
+  min-height: 3rem;
+  padding: 0 1.5rem;
+  border-radius: .75rem;
+  background-color: var(--color-brand);
+  color: #fff;
+  font-weight: 700;
+  font-size: 1.125rem;
+  transition: background-color .15s, transform .1s;
 }
+.btn-primary:hover { background-color: var(--color-brand-dark); }
+.btn-primary:active { transform: scale(.98); }
+.btn-primary:disabled { opacity: .5; cursor: not-allowed; }
+
+.btn-secondary {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: .5rem;
+  min-height: 3rem;
+  padding: 0 1.5rem;
+  border-radius: .75rem;
+  background-color: #fff;
+  color: #0f172a;
+  border: 1px solid #cbd5e1;
+  font-weight: 600;
+  font-size: 1.125rem;
+}
+.btn-secondary:hover { background-color: #f8fafc; }
+
+.btn-danger {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: .5rem;
+  min-height: 3rem;
+  padding: 0 1.5rem;
+  border-radius: .75rem;
+  background-color: #dc2626;
+  color: #fff;
+  font-weight: 700;
+  font-size: 1.125rem;
+}
+.btn-danger:hover { background-color: #b91c1c; }
+
+.input-base {
+  display: block;
+  width: 100%;
+  min-height: 3rem;
+  padding: 0 1rem;
+  border-radius: .75rem;
+  border: 1px solid #cbd5e1;
+  font-size: 1rem;
+  background-color: #fff;
+}
+.input-base:focus {
+  outline: none;
+  border-color: var(--color-brand);
+  box-shadow: 0 0 0 4px rgb(6 199 85 / .25);
+}
+.input-base::placeholder { color: #94a3b8; }
