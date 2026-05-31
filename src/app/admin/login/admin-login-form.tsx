@@ -9,7 +9,7 @@ import { Alert } from "@/ui/alert";
 
 const initial: AdminLoginState = { ok: false };
 
-export function AdminLoginForm() {
+export function AdminLoginForm({ redirectTo }: { redirectTo?: string }) {
   const [state, action, pending] = useActionState(adminLoginAction, initial);
 
   function err(k: string) {
@@ -18,6 +18,7 @@ export function AdminLoginForm() {
 
   return (
     <form action={action} className="space-y-4">
+      {redirectTo && <input type="hidden" name="redirectTo" value={redirectTo} />}
       {state.ok === false && state.error && (
         <Alert variant="danger">{state.error}</Alert>
       )}

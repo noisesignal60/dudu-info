@@ -1,6 +1,6 @@
 "use server";
 
-import { revalidateTag } from "next/cache";
+import { updateTag } from "next/cache";
 import { z } from "zod";
 import { getCurrentAdmin } from "@/lib/admin-session";
 import { supabaseAdmin } from "@/lib/supabase/admin";
@@ -32,16 +32,16 @@ async function loadPending(id: string) {
     | null;
 }
 
-function invalidate(memberId: string) {
-  revalidateTag("admin-withdrawals", "max");
-  revalidateTag("admin-withdrawal-counts", "max");
-  revalidateTag("admin-stats", "max");
-  revalidateTag("admin-activity", "max");
-  revalidateTag(`admin-withdrawal-${memberId}`, "max");
-  revalidateTag(`stats-${memberId}`, "max");
-  revalidateTag(`wd-${memberId}`, "max");
-  revalidateTag(`tx-${memberId}`, "max");
-  revalidateTag("admin-transactions", "max");
+function invalidate(memberId: string, withdrawalId: string) {
+  updateTag("admin-withdrawals");
+  updateTag("admin-withdrawal-counts");
+  updateTag("admin-stats");
+  updateTag("admin-activity");
+  updateTag(`admin-withdrawal-${withdrawalId}`);
+  updateTag(`stats-${memberId}`);
+  updateTag(`wd-${memberId}`);
+  updateTag(`tx-${memberId}`);
+  updateTag("admin-transactions");
 }
 
 export async function approveWithdrawalAction(
@@ -105,7 +105,7 @@ export async function approveWithdrawalAction(
     created_by: adminId,
   });
 
-  invalidate(wd.member_id);
+  invalidate(wd.member_id, id);
   return { ok: true, message: "已通過提領申請" };
 }
 
@@ -158,6 +158,6 @@ export async function rejectWithdrawalAction(
       .eq("member_id", wd.member_id);
   }
 
-  invalidate(wd.member_id);
+  invalidate(wd.member_id, id);
   return { ok: true, message: "已拒絕提領申請，金額已退回待領取" };
 }

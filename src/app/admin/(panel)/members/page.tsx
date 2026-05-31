@@ -79,7 +79,6 @@ async function MemberTable({ searchParams }: { searchParams: SearchParams }) {
               <TableRow>
                 <TableHead className="text-center">LINE 顯示名稱</TableHead>
                 <TableHead className="text-center">姓名</TableHead>
-                <TableHead className="text-center">Email</TableHead>
                 <TableHead className="text-center">電話</TableHead>
                 <TableHead className="text-center">推薦碼</TableHead>
                 <TableHead className="text-center">上級</TableHead>
@@ -96,7 +95,6 @@ async function MemberTable({ searchParams }: { searchParams: SearchParams }) {
                 <TableRow key={m.id}>
                   <TableCell>{m.lineDisplay ?? "—"}</TableCell>
                   <TableCell>{m.name ?? "—"}</TableCell>
-                  <TableCell className="max-w-[180px] truncate">{m.email ?? "—"}</TableCell>
                   <TableCell>{m.phone ?? "—"}</TableCell>
                   <TableCell>
                     {m.referralCode ? (
@@ -191,7 +189,7 @@ async function MemberTable({ searchParams }: { searchParams: SearchParams }) {
 
                 <div className="flex items-center justify-between text-sm">
                   <span className="text-slate-500 truncate">
-                    {m.phone ?? m.email ?? "—"}
+                    {m.phone ?? "—"}
                   </span>
                   <span className="text-accent-blue font-medium shrink-0">檢視 →</span>
                 </div>

@@ -1,6 +1,6 @@
 "use server";
 
-import { revalidateTag } from "next/cache";
+import { updateTag } from "next/cache";
 import { redirect } from "next/navigation";
 import { z } from "zod";
 import { getCurrentAdmin } from "@/lib/admin-session";
@@ -8,6 +8,7 @@ import { supabaseAdmin } from "@/lib/supabase/admin";
 import { addPassbookWatermark } from "@/lib/watermark";
 import { listMembersForExport } from "@/data/admin/members";
 import { formatDateTime } from "@/lib/utils";
+import { bankLabel } from "@/lib/banks";
 
 const PASSBOOK_BUCKET = process.env.SUPABASE_BUCKET_PASSBOOK || "passbooks";
 
@@ -63,9 +64,9 @@ export async function updateMemberBalanceAction(
     return { ok: false, error: "儲存失敗：" + error.message };
   }
 
-  revalidateTag(`admin-member-${memberId}`, "max");
-  revalidateTag(`stats-${memberId}`, "max");
-  revalidateTag("admin-stats", "max");
+  updateTag(`admin-member-${memberId}`);
+  updateTag(`stats-${memberId}`);
+  updateTag("admin-stats");
   return { ok: true, message: "已更新餘額" };
 }
 
@@ -76,7 +77,7 @@ export async function deleteMemberAction(memberId: string): Promise<void> {
   if (error) {
     throw new Error("刪除失敗：" + error.message);
   }
-  revalidateTag("admin-members", "max");
+  updateTag("admin-members");
   redirect("/admin/members");
 }
 
@@ -117,8 +118,8 @@ export async function replaceMemberPassbookAction(
     return { ok: false, error: "儲存失敗：" + error.message };
   }
 
-  revalidateTag(`admin-member-${memberId}`, "max");
-  revalidateTag(`member-${memberId}`, "max");
+  updateTag(`admin-member-${memberId}`);
+  updateTag(`member-${memberId}`);
   return { ok: true, message: "已更換存摺圖片" };
 }
 
@@ -135,12 +136,11 @@ export async function exportMembersCsvAction(
     const head = [
       "LINE 顯示名稱",
       "姓名",
-      "Email",
       "電話",
       "推薦碼",
       "上級",
       "銀行戶名",
-      "銀行代碼",
+      "銀行",
       "銀行帳號",
       "總收益",
       "待領取",
@@ -154,12 +154,11 @@ export async function exportMembersCsvAction(
         [
           r.lineDisplay ?? "",
           r.name ?? "",
-          r.email ?? "",
           r.phone ?? "",
           r.referralCode ?? "",
           r.uplineName ?? "",
           r.bankHolder ?? "",
-          r.bankCode ?? "",
+          bankLabel(r.bankCode) ?? "",
           r.bankAccount ?? "",
           r.totalEarned,
           r.pending,

@@ -1,29 +1,27 @@
 "use server";
 
-import { revalidateTag } from "next/cache";
+import { updateTag } from "next/cache";
 import { redirect } from "next/navigation";
 import { z } from "zod";
 import { auth } from "@/auth";
 import { supabaseAdmin } from "@/lib/supabase/admin";
 import { addPassbookWatermark } from "@/lib/watermark";
+import { isValidBankCode } from "@/lib/banks";
 
 const OnboardingSchema = z.object({
   name: z.string().trim().min(1, "請輸入姓名").max(50),
-  email: z
-    .string()
-    .trim()
-    .max(200)
-    .email("Email 格式錯誤")
-    .or(z.literal(""))
-    .optional()
-    .default(""),
   phone: z.string().trim().min(1, "請輸入行動電話"),
   bankHolder: z.string().trim().min(1, "請輸入銀行戶名"),
   bankAccount: z
     .string()
     .trim()
     .regex(/^\d{10,16}$/, "銀行帳號格式錯誤（10~16 碼數字）"),
-  bankCode: z.string().trim().optional().default(""),
+  bankCode: z
+    .string()
+    .trim()
+    .optional()
+    .default("")
+    .refine((v) => v === "" || isValidBankCode(v), "請從清單選擇銀行"),
   referralCode: z.string().trim().optional().default(""),
 });
 
@@ -43,11 +41,10 @@ export async function completeOnboardingAction(
 
   const parsed = OnboardingSchema.safeParse({
     name: formData.get("name"),
-    email: formData.get("email"),
     phone: formData.get("phone"),
     bankHolder: formData.get("bankHolder"),
     bankAccount: formData.get("bankAccount"),
-    bankCode: formData.get("bankCode"),
+    bankCode: formData.get("bankCode") ?? "",
     referralCode: formData.get("referralCode"),
   });
   if (!parsed.success) {
@@ -118,7 +115,6 @@ export async function completeOnboardingAction(
     .from("members")
     .update({
       name: parsed.data.name,
-      email: parsed.data.email || null,
       phone: parsed.data.phone,
       bank_holder: parsed.data.bankHolder,
       bank_account: parsed.data.bankAccount,
@@ -134,6 +130,30 @@ export async function completeOnboardingAction(
     return { ok: false, error: "儲存失敗，請稍後再試" };
   }
 
-  revalidateTag(`member-${memberId}`, "max");
+  // 往上收集最多 5 層上線（對應 networkCount 的 5 層深度）。
+  // 新會員會被計入這些上線的網絡人數；直接上線同時被計入其推薦人數。
+  const ancestors: string[] = [];
+  let cursor = uplineId;
+  for (let depth = 0; depth < 5 && cursor; depth++) {
+    ancestors.push(cursor);
+    const { data: parent } = await db
+      .from("members")
+      .select("upline_id")
+      .eq("id", cursor)
+      .maybeSingle();
+    cursor = (parent?.upline_id as string | null) ?? null;
+  }
+
+  updateTag(`member-${memberId}`);
+  // 整條上線鏈的 stats（推薦人數 + 網絡人數）即時更新
+  for (const id of ancestors) {
+    updateTag(`stats-${id}`);
+  }
+  // 後台即時反映新會員
+  if (uplineId) updateTag(`admin-member-${uplineId}`);
+  updateTag("admin-members");
+  updateTag("admin-stats");
+  updateTag("admin-network");
+
   redirect("/dashboard");
 }

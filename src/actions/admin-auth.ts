@@ -15,6 +15,20 @@ export type AdminLoginState =
   | { ok: false; error?: string; fieldErrors?: Record<string, string> }
   | { ok: true };
 
+// 只允許導向站內 /admin 或 /reports 底下的路徑，避免開放轉址（open redirect）
+const SAFE_PREFIXES = ["/admin", "/reports"];
+function safeRedirect(raw: FormDataEntryValue | null): string {
+  const v = typeof raw === "string" ? raw : "";
+  if (
+    v.startsWith("/") &&
+    !v.startsWith("//") &&
+    SAFE_PREFIXES.some((p) => v === p || v.startsWith(p + "/"))
+  ) {
+    return v;
+  }
+  return "/admin";
+}
+
 export async function adminLoginAction(
   _prev: AdminLoginState | null,
   formData: FormData,
@@ -60,7 +74,7 @@ export async function adminLoginAction(
   session.displayName = admin.display_name;
   await session.save();
 
-  redirect("/admin");
+  redirect(safeRedirect(formData.get("redirectTo")));
 }
 
 export async function adminLogoutAction() {

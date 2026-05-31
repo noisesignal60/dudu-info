@@ -2,11 +2,13 @@
 
 import { useActionState, useState } from "react";
 import { completeOnboardingAction, type OnboardingState } from "@/actions/onboarding";
+import { buildPassbookWatermarkSvg } from "@/lib/passbook-watermark";
 import { isValidBankAccount } from "@/lib/utils";
 import { Button } from "@/ui/button";
 import { Input } from "@/ui/input";
 import { Label } from "@/ui/label";
 import { Alert } from "@/ui/alert";
+import { BankSelect } from "@/ui/bank-select";
 
 const initial: OnboardingState = { ok: false };
 
@@ -14,7 +16,9 @@ export function OnboardingForm() {
   const [state, action, pending] = useActionState(completeOnboardingAction, initial);
   const [bankAccount, setBankAccount] = useState("");
   const [bankAccountError, setBankAccountError] = useState<string | null>(null);
-  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+  const [preview, setPreview] = useState<{ url: string; svg: string } | null>(
+    null,
+  );
 
   function err(field: string): string | undefined {
     return state.ok === false ? state.fieldErrors?.[field] : undefined;
@@ -28,17 +32,6 @@ export function OnboardingForm() {
 
       <Field label="姓名" required error={err("name")}>
         <Input name="name" required inputSize="touch" placeholder="王大明" aria-invalid={!!err("name")} />
-      </Field>
-
-      <Field label="Email（選填）" error={err("email")}>
-        <Input
-          name="email"
-          type="email"
-          inputMode="email"
-          inputSize="touch"
-          placeholder="example@mail.com"
-          aria-invalid={!!err("email")}
-        />
       </Field>
 
       <Field label="行動電話" required error={err("phone")}>
@@ -58,7 +51,7 @@ export function OnboardingForm() {
       </Field>
 
       <Field label="銀行代碼（選填）">
-        <Input name="bankCode" inputSize="touch" placeholder="例如：004 臺灣銀行" />
+        <BankSelect name="bankCode" placeholder="請選擇銀行（選填）" />
       </Field>
 
       <Field
@@ -105,18 +98,36 @@ export function OnboardingForm() {
                        hover:file:bg-brand/20 cursor-pointer"
             onChange={(e) => {
               const f = e.target.files?.[0];
-              if (f) {
-                setPreviewUrl(URL.createObjectURL(f));
-              }
+              if (!f) return;
+              if (preview) URL.revokeObjectURL(preview.url);
+              const url = URL.createObjectURL(f);
+              const img = new Image();
+              img.onload = () => {
+                setPreview({
+                  url,
+                  svg: buildPassbookWatermarkSvg(
+                    img.naturalWidth,
+                    img.naturalHeight,
+                  ),
+                });
+              };
+              img.src = url;
             }}
           />
         </label>
-        {previewUrl && (
+        {preview && (
           <div className="mt-3 rounded-xl overflow-hidden border border-hairline">
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src={previewUrl} alt="存摺預覽" className="w-full" />
+            <div className="relative">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img src={preview.url} alt="存摺預覽" className="block w-full" />
+              <div
+                aria-hidden
+                className="pointer-events-none absolute inset-0 [&>svg]:block [&>svg]:w-full [&>svg]:h-full"
+                dangerouslySetInnerHTML={{ __html: preview.svg }}
+              />
+            </div>
             <p className="text-xs text-slate-500 p-2 text-center">
-              ※ 預覽圖未加浮水印；正式儲存時會自動加上。
+              ※ 已套用「嘟嘟資訊網」浮水印，正式儲存的圖片即為此樣式。
             </p>
           </div>
         )}

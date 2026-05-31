@@ -70,12 +70,12 @@ async function HistoryBlock() {
               <TableHeader>
                 <TableRow>
                   <TableHead>變更時間</TableHead>
-                  <TableHead className="text-right">A 比例</TableHead>
-                  <TableHead className="text-right">B 比例</TableHead>
-                  <TableHead className="text-right">C 比例</TableHead>
-                  <TableHead className="text-right">D 比例</TableHead>
-                  <TableHead className="text-right">E 比例</TableHead>
-                  <TableHead className="text-right">新會員獎勵</TableHead>
+                  <TableHead>A 比例</TableHead>
+                  <TableHead>B 比例</TableHead>
+                  <TableHead>C 比例</TableHead>
+                  <TableHead>D 比例</TableHead>
+                  <TableHead>E 比例</TableHead>
+                  <TableHead>新會員獎勵</TableHead>
                   <TableHead>狀態</TableHead>
                   <TableHead>變更人員</TableHead>
                 </TableRow>

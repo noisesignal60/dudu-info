@@ -1,9 +1,10 @@
 "use server";
 
-import { revalidateTag } from "next/cache";
+import { updateTag } from "next/cache";
 import { z } from "zod";
 import { auth } from "@/auth";
 import { supabaseAdmin } from "@/lib/supabase/admin";
+import { isValidBankCode } from "@/lib/banks";
 
 const MIN_AMOUNT = 100;
 
@@ -12,7 +13,12 @@ const WithdrawalSchema = z.object({
     .number()
     .min(MIN_AMOUNT, `最低提領金額為 $${MIN_AMOUNT}`)
     .max(10_000_000, "金額過大"),
-  bankCode: z.string().trim().optional().default(""),
+  bankCode: z
+    .string()
+    .trim()
+    .optional()
+    .default("")
+    .refine((v) => v === "" || isValidBankCode(v), "請從清單選擇銀行"),
   bankAccount: z.string().trim().optional().default(""),
   note: z.string().trim().max(200).optional().default(""),
 });
@@ -31,7 +37,7 @@ export async function requestWithdrawalAction(
 
   const parsed = WithdrawalSchema.safeParse({
     amount: formData.get("amount"),
-    bankCode: formData.get("bankCode"),
+    bankCode: formData.get("bankCode") ?? "",
     bankAccount: formData.get("bankAccount"),
     note: formData.get("note"),
   });
@@ -88,8 +94,8 @@ export async function requestWithdrawalAction(
     })
     .eq("member_id", memberId);
 
-  revalidateTag(`stats-${memberId}`, "max");
-  revalidateTag(`wd-${memberId}`, "max");
+  updateTag(`stats-${memberId}`);
+  updateTag(`wd-${memberId}`);
 
   return { ok: true, message: "提領申請已送出，將於 1–3 個工作日內處理" };
 }

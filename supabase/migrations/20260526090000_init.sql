@@ -47,7 +47,6 @@ create table if not exists public.members (
   line_user_id      text unique not null,
   line_display      text,
   line_avatar_url   text,
-  email             text,
   name              text,
   phone             text,
   birthday          date,

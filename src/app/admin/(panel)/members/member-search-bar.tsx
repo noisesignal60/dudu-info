@@ -43,7 +43,7 @@ export function MemberSearchBar() {
           inputSize="sm"
           value={q}
           onChange={(e) => setQ(e.target.value)}
-          placeholder="搜尋姓名、LINE 名稱、推薦碼、Email 或電話…"
+          placeholder="搜尋姓名、LINE 名稱、推薦碼或電話…"
           className="pr-10"
         />
         {q && (

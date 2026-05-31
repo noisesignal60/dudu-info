@@ -2,11 +2,11 @@
 
 import { useState, useTransition } from "react";
 import Link from "next/link";
-import { Pencil, Trash2 } from "lucide-react";
+import { Pencil, Trash2, ChevronUp, ChevronDown } from "lucide-react";
 import type { LedgerEntry, LedgerSortKey } from "@/data/reports/ledger";
 import type { Department } from "@/data/reports/departments";
 import { softDeleteLedgerEntriesAction } from "@/actions/reports-ledger";
-import { formatCurrency, cn } from "@/lib/utils";
+import { formatCurrency } from "@/lib/utils";
 import { Button } from "@/ui/button";
 import { Alert } from "@/ui/alert";
 import { EmptyState } from "@/ui/empty-state";
@@ -146,18 +146,16 @@ export function LedgerTable({
                 label="收入"
                 basePath={basePath}
                 current={currentSort}
-                align="right"
               />
               <SortableTh
                 field="expense"
                 label="支出"
                 basePath={basePath}
                 current={currentSort}
-                align="right"
               />
               <TableHead>備註1</TableHead>
               <TableHead>備註2</TableHead>
-              {editable && <TableHead className="text-right">操作</TableHead>}
+              {editable && <TableHead>操作</TableHead>}
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -325,13 +323,11 @@ function SortableTh({
   label,
   basePath,
   current,
-  align = "left",
 }: {
   field: SortField;
   label: string;
   basePath: string;
   current: LedgerSortKey;
-  align?: "left" | "right";
 }) {
   const ascKey = `${field}.asc` as LedgerSortKey;
   const descKey = `${field}.desc` as LedgerSortKey;
@@ -340,13 +336,18 @@ function SortableTh({
   const nextSort = isDesc ? ascKey : descKey;
 
   return (
-    <TableHead className={cn(align === "right" && "text-right")}>
+    <TableHead>
       <Link
         href={`${basePath}?sort=${nextSort}`}
         className="inline-flex items-center gap-1 hover:text-slate-900"
+        aria-label={`依${label}排序，目前${isAsc ? "升冪" : isDesc ? "降冪" : "未排序"}`}
       >
         {label}
-        {isAsc ? "（升冪）" : isDesc ? "（降冪）" : null}
+        {isAsc ? (
+          <ChevronUp className="size-3.5" />
+        ) : isDesc ? (
+          <ChevronDown className="size-3.5" />
+        ) : null}
       </Link>
     </TableHead>
   );

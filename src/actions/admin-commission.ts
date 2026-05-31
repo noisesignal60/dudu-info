@@ -1,6 +1,6 @@
 "use server";
 
-import { revalidateTag } from "next/cache";
+import { updateTag } from "next/cache";
 import { z } from "zod";
 import { getCurrentAdmin } from "@/lib/admin-session";
 import { supabaseAdmin } from "@/lib/supabase/admin";
@@ -77,7 +77,7 @@ export async function updateCommissionAction(
     return { ok: false, error: "儲存失敗：" + error.message };
   }
 
-  revalidateTag("commission-settings", "max");
-  revalidateTag("commission-history", "max");
+  updateTag("commission-settings");
+  updateTag("commission-history");
   return { ok: true, message: "已更新分潤設定" };
 }

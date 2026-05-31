@@ -38,7 +38,7 @@ export default function ReportsLayout({
 
 async function AdminPill() {
   const admin = await getCurrentAdmin();
-  if (!admin) redirect("/admin/login");
+  if (!admin) redirect("/reports/login");
 
   return (
     <div className="flex items-center gap-3 text-sm">

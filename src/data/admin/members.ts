@@ -9,7 +9,6 @@ export type AdminMemberRow = {
   lineDisplay: string | null;
   lineAvatarUrl: string | null;
   name: string | null;
-  email: string | null;
   phone: string | null;
   referralCode: string | null;
   uplineName: string | null;
@@ -34,7 +33,7 @@ export type MemberListResult = {
 };
 
 export type MemberListParams = {
-  q?: string;          // 搜尋（姓名 / LINE 名稱 / 推薦碼 / Email / 電話）
+  q?: string;          // 搜尋（姓名 / LINE 名稱 / 推薦碼 / 電話）
   page?: number;
   pageSize?: number;
 };
@@ -49,7 +48,7 @@ export async function listMembers(
   return queryMembers(q, page, pageSize);
 }
 
-const MEMBER_SELECT = `id, line_user_id, line_display, line_avatar_url, name, email, phone,
+const MEMBER_SELECT = `id, line_user_id, line_display, line_avatar_url, name, phone,
    referral_code, created_at,
    bank_holder, bank_account, bank_code, passbook_url,
    upline:upline_id ( name, referral_code )`;
@@ -99,7 +98,6 @@ async function enrichMemberRows(
       lineDisplay: r.line_display as string | null,
       lineAvatarUrl: r.line_avatar_url as string | null,
       name: r.name as string | null,
-      email: r.email as string | null,
       phone: r.phone as string | null,
       referralCode: r.referral_code as string | null,
       uplineName: upline?.name ?? null,
@@ -118,7 +116,7 @@ async function enrichMemberRows(
   });
 }
 
-/** 套用搜尋條件（name / line_display / referral_code / email / phone 模糊比對） */
+/** 套用搜尋條件（name / line_display / referral_code / phone 模糊比對） */
 function applyMemberSearch<T extends { or: (f: string) => T }>(query: T, q: string): T {
   if (!q) return query;
   const pattern = `%${q}%`;
@@ -127,7 +125,6 @@ function applyMemberSearch<T extends { or: (f: string) => T }>(query: T, q: stri
       `name.ilike.${pattern}`,
       `line_display.ilike.${pattern}`,
       `referral_code.ilike.${pattern}`,
-      `email.ilike.${pattern}`,
       `phone.ilike.${pattern}`,
     ].join(","),
   );
@@ -183,7 +180,7 @@ export async function getMemberById(id: string): Promise<AdminMemberRow | null> 
   const { data } = await db
     .from("members")
     .select(
-      `id, line_user_id, line_display, line_avatar_url, name, email, phone,
+      `id, line_user_id, line_display, line_avatar_url, name, phone,
        referral_code, created_at,
        bank_holder, bank_account, bank_code, passbook_url,
        upline:upline_id ( name, referral_code )`,
@@ -209,7 +206,6 @@ export async function getMemberById(id: string): Promise<AdminMemberRow | null> 
     lineDisplay: data.line_display as string | null,
     lineAvatarUrl: data.line_avatar_url as string | null,
     name: data.name as string | null,
-    email: data.email as string | null,
     phone: data.phone as string | null,
     referralCode: data.referral_code as string | null,
     uplineName: upline?.name ?? null,

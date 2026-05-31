@@ -16,7 +16,6 @@ create table if not exists public.members (
   line_user_id    text unique not null,            -- LINE userId（authoritative）
   line_display    text,                            -- LINE 顯示名稱
   line_avatar_url text,
-  email           text,                            -- 由 LINE 帶入（可能為 null）
   name            text,                            -- 系統內姓名（可改）
   phone           text,                            -- 行動電話（可改）
   birthday        date,

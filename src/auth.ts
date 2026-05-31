@@ -80,7 +80,6 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
             line_user_id: lineUserId,
             line_display: user.name,
             line_avatar_url: user.image,
-            email: user.email,
             referral_code: referralCode,
             profile_completed: false,
           })
@@ -100,7 +99,6 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
           .update({
             line_display: user.name,
             line_avatar_url: user.image,
-            email: user.email,
           })
           .eq("id", existing.id);
       }

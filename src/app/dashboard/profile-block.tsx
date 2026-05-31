@@ -9,6 +9,7 @@ import { Button } from "@/ui/button";
 import { Input } from "@/ui/input";
 import { Label } from "@/ui/label";
 import { Alert } from "@/ui/alert";
+import { BankSelect } from "@/ui/bank-select";
 
 const initial: ProfileState = { ok: false };
 
@@ -41,7 +42,6 @@ export function ProfileBlock({ member }: { member: MemberProfile }) {
       <div>
         <dl className="grid grid-cols-1 sm:grid-cols-2 gap-3">
           <Item label="姓名" value={member.name} />
-          <Item label="Email" value={member.email} />
           <Item label="電話" value={member.phone} />
           <Item label="我的推薦碼" value={member.referralCode} highlight />
           <Item
@@ -70,7 +70,6 @@ export function ProfileBlock({ member }: { member: MemberProfile }) {
   return (
     <form action={action} className="space-y-4">
       <Field label="姓名" required defaultValue={member.name ?? ""} name="name" err={err("name")} />
-      <Field label="Email（選填）" defaultValue={member.email ?? ""} name="email" type="email" err={err("email")} />
       <Field label="行動電話" required defaultValue={member.phone ?? ""} name="phone" type="tel" err={err("phone")} />
       <Field
         label="銀行戶名"
@@ -79,11 +78,10 @@ export function ProfileBlock({ member }: { member: MemberProfile }) {
         name="bankHolder"
         err={err("bankHolder")}
       />
-      <Field
-        label="銀行代碼（選填）"
-        defaultValue={member.bankCode ?? ""}
-        name="bankCode"
-      />
+      <div className="space-y-2">
+        <Label>銀行代碼（選填）</Label>
+        <BankSelect name="bankCode" defaultValue={member.bankCode ?? undefined} />
+      </div>
       <div className="space-y-2">
         <Label>
           銀行帳號 <span className="text-money">*</span>

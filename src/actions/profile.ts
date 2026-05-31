@@ -1,27 +1,25 @@
 "use server";
 
-import { revalidateTag } from "next/cache";
+import { updateTag } from "next/cache";
 import { z } from "zod";
 import { auth } from "@/auth";
 import { supabaseAdmin } from "@/lib/supabase/admin";
+import { isValidBankCode } from "@/lib/banks";
 
 const UpdateProfileSchema = z.object({
   name: z.string().trim().min(1, "請輸入姓名").max(50),
-  email: z
-    .string()
-    .trim()
-    .max(200)
-    .email("Email 格式錯誤")
-    .or(z.literal(""))
-    .optional()
-    .default(""),
   phone: z.string().trim().min(1, "請輸入行動電話"),
   bankHolder: z.string().trim().min(1, "請輸入銀行戶名"),
   bankAccount: z
     .string()
     .trim()
     .regex(/^\d{10,16}$/, "銀行帳號格式錯誤（10~16 碼數字）"),
-  bankCode: z.string().trim().optional().default(""),
+  bankCode: z
+    .string()
+    .trim()
+    .optional()
+    .default("")
+    .refine((v) => v === "" || isValidBankCode(v), "請從清單選擇銀行"),
 });
 
 export type ProfileState =
@@ -42,11 +40,10 @@ export async function updateProfileAction(
 
   const parsed = UpdateProfileSchema.safeParse({
     name: formData.get("name"),
-    email: formData.get("email"),
     phone: formData.get("phone"),
     bankHolder: formData.get("bankHolder"),
     bankAccount: formData.get("bankAccount"),
-    bankCode: formData.get("bankCode"),
+    bankCode: formData.get("bankCode") ?? "",
   });
   if (!parsed.success) {
     const fieldErrors: Record<string, string> = {};
@@ -62,7 +59,6 @@ export async function updateProfileAction(
     .from("members")
     .update({
       name: parsed.data.name,
-      email: parsed.data.email || null,
       phone: parsed.data.phone,
       bank_holder: parsed.data.bankHolder,
       bank_account: parsed.data.bankAccount,
@@ -75,6 +71,6 @@ export async function updateProfileAction(
     return { ok: false, error: "儲存失敗，請稍後再試" };
   }
 
-  revalidateTag(`member-${memberId}`, "max");
+  updateTag(`member-${memberId}`);
   return { ok: true, message: "儲存成功" };
 }

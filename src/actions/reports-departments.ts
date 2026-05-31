@@ -1,6 +1,6 @@
 "use server";
 
-import { revalidateTag } from "next/cache";
+import { updateTag } from "next/cache";
 import { z } from "zod";
 import { getCurrentAdmin } from "@/lib/admin-session";
 import { supabaseAdmin } from "@/lib/supabase/admin";
@@ -41,7 +41,7 @@ export async function createDepartmentAction(
     };
   }
 
-  revalidateTag("reports-departments", "max");
+  updateTag("reports-departments");
   return { ok: true, message: "已新增部門" };
 }
 
@@ -66,7 +66,7 @@ export async function renameDepartmentAction(
       error: error.code === "23505" ? "此部門名稱已存在" : error.message,
     };
   }
-  revalidateTag("reports-departments", "max");
+  updateTag("reports-departments");
   return { ok: true };
 }
 
@@ -88,6 +88,6 @@ export async function deleteDepartmentAction(
 
   const { error } = await db.from("departments").delete().eq("id", id);
   if (error) return { ok: false, error: error.message };
-  revalidateTag("reports-departments", "max");
+  updateTag("reports-departments");
   return { ok: true };
 }

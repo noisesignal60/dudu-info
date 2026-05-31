@@ -6,6 +6,7 @@ import {
   getPassbookSignedUrl,
 } from "@/data/admin/members";
 import { formatCurrency, formatDateTime } from "@/lib/utils";
+import { bankLabel } from "@/lib/banks";
 import { Button } from "@/ui/button";
 import {
   Card,
@@ -102,10 +103,9 @@ async function MemberDetail({ params }: { params: Params }) {
           <CardContent>
             <div className="grid grid-cols-2 gap-4">
               <Field label="姓名" value={m.name} />
-              <Field label="Email" value={m.email} />
               <Field label="電話" value={m.phone} />
               <Field label="銀行戶名" value={m.bankHolder} />
-              <Field label="銀行代碼" value={m.bankCode} />
+              <Field label="銀行" value={bankLabel(m.bankCode)} />
               <Field label="銀行帳號" value={m.bankAccount} />
             </div>
           </CardContent>

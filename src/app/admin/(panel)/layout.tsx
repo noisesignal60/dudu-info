@@ -1,6 +1,7 @@
 import { Suspense } from "react";
 import { redirect } from "next/navigation";
 import { getCurrentAdmin } from "@/lib/admin-session";
+import { countWithdrawalsByStatus } from "@/data/admin/withdrawals";
 import { AdminTopNav } from "../_components/admin-topnav";
 
 export const metadata = {
@@ -13,7 +14,7 @@ export default function AdminPanelLayout({
   children: React.ReactNode;
 }) {
   return (
-    <div className="min-h-svh bg-background">
+    <div className="min-h-svh bg-background overflow-x-clip">
       <Suspense fallback={<div className="h-16 bg-primary" />}>
         <NavBlock />
       </Suspense>
@@ -27,5 +28,6 @@ export default function AdminPanelLayout({
 async function NavBlock() {
   const admin = await getCurrentAdmin();
   if (!admin) redirect("/admin/login");
-  return <AdminTopNav admin={admin} />;
+  const counts = await countWithdrawalsByStatus();
+  return <AdminTopNav admin={admin} pendingWithdrawals={counts.pending} />;
 }

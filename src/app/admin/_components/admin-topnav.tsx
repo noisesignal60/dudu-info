@@ -22,10 +22,17 @@ const MENU: Item[] = [
   { label: "提領申請", href: "/admin/withdrawals" },
   { label: "網絡樹狀圖", href: "/admin/network" },
   { label: "分潤比例", href: "/admin/commission" },
+  { label: "公告欄", href: "/admin/announcements" },
   { label: "報表", href: "/reports" },
 ];
 
-export function AdminTopNav({ admin }: { admin: AdminSessionData }) {
+export function AdminTopNav({
+  admin,
+  pendingWithdrawals = 0,
+}: {
+  admin: AdminSessionData;
+  pendingWithdrawals?: number;
+}) {
   const [open, setOpen] = useState(false);
   const pathname = usePathname();
 
@@ -43,8 +50,8 @@ export function AdminTopNav({ admin }: { admin: AdminSessionData }) {
           <p className="font-serif font-bold mt-0.5">後台管理</p>
         </Link>
 
-        {/* 中：桌機水平選單 */}
-        <nav className="hidden lg:flex items-center gap-1 flex-1 justify-center">
+        {/* 中：桌機水平選單（大字級下 9 項需 ~1360px 才塞得下，未達寬度一律用漢堡選單，避免撐寬整頁） */}
+        <nav className="hidden min-[1360px]:flex items-center gap-1 flex-1 min-w-0 justify-center">
           {MENU.map((item) => {
             const active = isActive(item.href);
             return (
@@ -52,25 +59,24 @@ export function AdminTopNav({ admin }: { admin: AdminSessionData }) {
                 key={item.href}
                 href={item.href}
                 className={cn(
-                  "px-3 py-2 rounded-lg text-sm font-medium transition-colors whitespace-nowrap",
+                  "px-3 py-2 rounded-lg text-sm font-medium transition-colors whitespace-nowrap inline-flex items-center",
                   active
                     ? "bg-white text-accent-blue font-semibold"
                     : "text-white/85 hover:bg-white/10 hover:text-white"
                 )}
               >
                 {item.label}
+                {item.href === "/admin/withdrawals" && (
+                  <NavBadge count={pendingWithdrawals} className="ml-1.5" />
+                )}
               </Link>
             );
           })}
         </nav>
 
-        {/* 右：admin 資訊（xl）+ 登出（lg）／hamburger（lg 以下） */}
+        {/* 右：登出（桌機水平選單時）／hamburger（其餘）。管理員資訊改在漢堡面板內常駐，省下頂列空間 */}
         <div className="flex items-center gap-3 shrink-0">
-          <div className="hidden xl:block text-right leading-none">
-            <p className="text-sm font-semibold">{admin.displayName}</p>
-            <p className="text-xs text-white/70 mt-1">{admin.username}</p>
-          </div>
-          <form action={adminLogoutAction} className="hidden lg:block">
+          <form action={adminLogoutAction} className="hidden min-[1360px]:block">
             <Button
               type="submit"
               variant="ghost"
@@ -83,7 +89,7 @@ export function AdminTopNav({ admin }: { admin: AdminSessionData }) {
           <button
             type="button"
             onClick={() => setOpen((v) => !v)}
-            className="lg:hidden grid size-10 place-items-center rounded-lg text-white hover:bg-white/10 transition-colors"
+            className="min-[1360px]:hidden grid size-10 place-items-center rounded-lg text-white hover:bg-white/10 transition-colors"
             aria-label="選單"
             aria-expanded={open}
           >
@@ -96,11 +102,11 @@ export function AdminTopNav({ admin }: { admin: AdminSessionData }) {
       {open && (
         <>
           <div
-            className="lg:hidden fixed inset-x-0 bottom-0 top-16 z-40 bg-ink/40 backdrop-blur-[1px]"
+            className="min-[1360px]:hidden fixed inset-x-0 bottom-0 top-16 z-40 bg-ink/40 backdrop-blur-[1px]"
             onClick={() => setOpen(false)}
           />
-          <nav className="lg:hidden relative z-50 bg-primary border-t border-white/15 px-3 py-3 space-y-1">
-            <div className="sm:hidden px-3 pb-2 mb-1 border-b border-white/15 leading-none">
+          <nav className="min-[1360px]:hidden relative z-50 bg-primary border-t border-white/15 px-3 py-3 space-y-1">
+            <div className="px-3 pb-2 mb-1 border-b border-white/15 leading-none">
               <p className="text-sm font-semibold">{admin.displayName}</p>
               <p className="text-xs text-white/70 mt-1">{admin.username}</p>
             </div>
@@ -112,13 +118,16 @@ export function AdminTopNav({ admin }: { admin: AdminSessionData }) {
                   href={item.href}
                   onClick={() => setOpen(false)}
                   className={cn(
-                    "block px-3 py-2.5 rounded-lg font-medium transition-colors",
+                    "flex items-center px-3 py-2.5 rounded-lg font-medium transition-colors",
                     active
                       ? "bg-white text-accent-blue font-semibold"
                       : "text-white/90 hover:bg-white/10"
                   )}
                 >
                   {item.label}
+                  {item.href === "/admin/withdrawals" && (
+                    <NavBadge count={pendingWithdrawals} className="ml-auto" />
+                  )}
                 </Link>
               );
             })}
@@ -136,5 +145,22 @@ export function AdminTopNav({ admin }: { admin: AdminSessionData }) {
         </>
       )}
     </header>
+  );
+}
+
+/** 未審核提領數字徽章：數量為 0 時不顯示 */
+function NavBadge({ count, className }: { count: number; className?: string }) {
+  if (count <= 0) return null;
+  return (
+    <span
+      className={cn(
+        "min-w-5 h-5 px-1.5 grid place-items-center text-xs font-bold rounded-full " +
+          "bg-destructive text-white leading-none",
+        className,
+      )}
+      aria-label={`${count} 筆待審核`}
+    >
+      {count > 99 ? "99+" : count}
+    </span>
   );
 }

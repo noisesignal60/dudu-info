@@ -19,7 +19,9 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Architecture
 
-This is **Next.js 16 App Router** with `cacheComponents: true` (see `next.config.ts`) — the new explicit-cache model. Treat every async DAL function that's safe to cache as needing `"use cache"` + a `cacheTag`, and pair every mutating server action with `revalidateTag(..., "max")`. Anything dynamic must be wrapped in `<Suspense>` (the dashboard and admin pages do this for every section).
+This is **Next.js 16 App Router** with `cacheComponents: true` (see `next.config.ts`) — the new explicit-cache model. Treat every async DAL function that's safe to cache as needing `"use cache"` + a `cacheTag`, and pair every mutating server action with `updateTag(tag)` for each tag it touches. Anything dynamic must be wrapped in `<Suspense>` (the dashboard and admin pages do this for every section).
+
+**Use `updateTag`, not `revalidateTag`, for read-your-writes.** `revalidateTag(tag, "max")` is stale-while-revalidate — it marks the cache stale but the in-flight refresh after the action still serves the OLD value, so the user doesn't see their change until a later request/navigation (this caused a "new department doesn't appear in the menu" bug). `updateTag(tag)` immediately expires the cache and the same request re-reads fresh data, so the change shows instantly. `updateTag` takes a single tag string (no `"max"`), can only be called inside a Server Action, and is the default for every mutation here. Reserve `revalidateTag(tag, "max")` for the rare case where eventual consistency is acceptable and the user need not see the change in the current request (and note why at the call site); use it (not `updateTag`) in Route Handlers, where `updateTag` is unavailable.
 
 The project name is 嘟嘟資訊網 — a Taiwan-Chinese commission / profit-sharing dashboard for taxi drivers, with a LINE-login member side and a username/password admin back office. UI copy and validation messages are in Traditional Chinese; preserve that when editing user-facing strings.
 
@@ -36,7 +38,7 @@ There are **two independent session mechanisms** running side by side — do not
 
 - **All Supabase calls go through `supabaseAdmin()` (`src/lib/supabase/admin.ts`) using the service-role key.** RLS is enabled on every table as defense-in-depth, but service_role bypasses it — authorization is the application's job. The anon key exists in env but is unused; do not introduce client-side Supabase queries.
 - `src/data/**` is the read DAL — server-only modules (`import "server-only"`) with `"use cache"` + `cacheTag(...)`. Tags follow the pattern `member-<id>`, `stats-<id>`, `wd-<id>`, `admin-members`, `admin-member-<id>`, `admin-stats`. When you change a mutation, list every tag it invalidates.
-- `src/actions/**` is the write layer — `"use server"` modules that validate with Zod, mutate via `supabaseAdmin()`, call `revalidateTag`, then optionally `redirect()`. The state shape is consistently `{ ok: false, fieldErrors?, error? } | { ok: true, message? }` — match it for new actions so `useActionState` consumers stay uniform.
+- `src/actions/**` is the write layer — `"use server"` modules that validate with Zod, mutate via `supabaseAdmin()`, call `updateTag` for every tag they touch (see the caching note above — `updateTag` not `revalidateTag`, so changes show instantly), then optionally `redirect()`. The state shape is consistently `{ ok: false, fieldErrors?, error? } | { ok: true, message? }` — match it for new actions so `useActionState` consumers stay uniform.
 - Balances are denormalized: `public.balances` holds `total_earned / pending / withdrawn / locked` snapshots. Withdrawal flow moves money `pending → locked` on request; admin approval/rejection (not yet implemented as of writing) moves `locked → withdrawn` or back. Don't compute these from `transactions` on the fly — update the snapshot in the same action that writes the transaction.
 - Passbook uploads (`src/actions/onboarding.ts` + `src/lib/watermark.ts`): images are watermarked with `sharp` before upload to the private `passbooks` bucket, and `members.passbook_url` is **write-once** — the action refuses to overwrite. Signed URLs for admin viewing come from `getPassbookSignedUrl()`.
 
@@ -56,5 +58,5 @@ Tailwind v4 (`@import "tailwindcss"` + `@theme` block in `globals.css`). Brand c
 `AGENTS.md` warns that this is **not** the Next.js in your training data. Things that bit prior sessions:
 
 - The proxy file is `src/proxy.ts`, not `middleware.ts`.
-- `cacheComponents: true` makes the `"use cache"` directive and `cacheTag` / `revalidateTag(tag, "max")` the canonical caching API — don't reach for `unstable_cache` or `revalidatePath` first.
+- `cacheComponents: true` makes the `"use cache"` directive and `cacheTag` / `updateTag(tag)` (read-your-writes; `revalidateTag(tag, "max")` only for eventual-consistency cases or Route Handlers) the canonical caching API — don't reach for `unstable_cache` or `revalidatePath` first.
 - Before touching anything Next-version-sensitive (caching, routing, server actions, image config, fonts), read the relevant page under `node_modules/next/dist/docs/` rather than relying on memory.

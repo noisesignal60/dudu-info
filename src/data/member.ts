@@ -7,7 +7,6 @@ import { supabaseAdmin } from "@/lib/supabase/admin";
 export type MemberProfile = {
   id: string;
   name: string | null;
-  email: string | null;
   phone: string | null;
   bankHolder: string | null;
   bankAccount: string | null;
@@ -38,7 +37,7 @@ async function getMemberById(memberId: string): Promise<MemberProfile | null> {
   const { data, error } = await db
     .from("members")
     .select(
-      `id, name, email, phone,
+      `id, name, phone,
        bank_holder, bank_account, bank_code, passbook_url,
        referral_code, line_display, line_avatar_url, profile_completed,
        upline:upline_id ( name, referral_code )`,
@@ -58,7 +57,6 @@ async function getMemberById(memberId: string): Promise<MemberProfile | null> {
   return {
     id: data.id,
     name: data.name,
-    email: data.email,
     phone: data.phone,
     bankHolder: data.bank_holder,
     bankAccount: data.bank_account,

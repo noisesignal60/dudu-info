@@ -1,6 +1,6 @@
 "use server";
 
-import { revalidateTag } from "next/cache";
+import { updateTag } from "next/cache";
 import { z } from "zod";
 import argon2 from "argon2";
 import { getCurrentAdmin } from "@/lib/admin-session";
@@ -88,7 +88,7 @@ export async function createAdminAction(
     return { ok: false, error: "建立失敗：" + error.message };
   }
 
-  revalidateTag("admin-admins", "max");
+  updateTag("admin-admins");
   return { ok: true, message: "已新增管理員" };
 }
 
@@ -114,8 +114,8 @@ export async function updateAdminAction(
     return { ok: false, error: "儲存失敗：" + error.message };
   }
 
-  revalidateTag("admin-admins", "max");
-  revalidateTag(`admin-admin-${targetId}`, "max");
+  updateTag("admin-admins");
+  updateTag(`admin-admin-${targetId}`);
   return { ok: true, message: "已更新" };
 }
 
@@ -142,7 +142,7 @@ export async function resetAdminPasswordAction(
     return { ok: false, error: "重設失敗：" + error.message };
   }
 
-  revalidateTag("admin-admins", "max");
+  updateTag("admin-admins");
   return { ok: true, message: "密碼已重設" };
 }
 
@@ -164,7 +164,7 @@ export async function toggleAdminActiveAction(
     return { ok: false, error: error.message };
   }
 
-  revalidateTag("admin-admins", "max");
-  revalidateTag(`admin-admin-${targetId}`, "max");
+  updateTag("admin-admins");
+  updateTag(`admin-admin-${targetId}`);
   return { ok: true };
 }

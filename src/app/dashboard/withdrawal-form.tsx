@@ -8,6 +8,7 @@ import { Input } from "@/ui/input";
 import { Textarea } from "@/ui/textarea";
 import { Label } from "@/ui/label";
 import { Alert } from "@/ui/alert";
+import { BankSelect } from "@/ui/bank-select";
 
 const initial: WithdrawalState = { ok: false };
 
@@ -59,8 +60,8 @@ export function WithdrawalForm({ available }: { available: number }) {
         </div>
       </Field>
 
-      <Field label="銀行代碼（選填）">
-        <Input name="bankCode" inputSize="touch" placeholder="使用註冊時填寫的銀行" />
+      <Field label="銀行代碼（選填）" hint="不選則使用註冊時填寫的銀行">
+        <BankSelect name="bankCode" placeholder="同註冊銀行（可改）" />
       </Field>
 
       <Field label="銀行帳號（選填）" hint="不填則使用註冊時填寫的帳號">

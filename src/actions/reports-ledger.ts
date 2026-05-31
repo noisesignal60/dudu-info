@@ -1,6 +1,6 @@
 "use server";
 
-import { revalidateTag } from "next/cache";
+import { updateTag } from "next/cache";
 import { z } from "zod";
 import { getCurrentAdmin } from "@/lib/admin-session";
 import { supabaseAdmin } from "@/lib/supabase/admin";
@@ -69,7 +69,7 @@ export async function createLedgerEntryAction(
   });
   if (error) return { ok: false, error: error.message };
 
-  revalidateTag("reports-ledger", "max");
+  updateTag("reports-ledger");
   return { ok: true, message: "已新增記錄" };
 }
 
@@ -110,7 +110,7 @@ export async function updateLedgerEntryAction(
     .eq("id", id);
   if (error) return { ok: false, error: error.message };
 
-  revalidateTag("reports-ledger", "max");
+  updateTag("reports-ledger");
   return { ok: true, message: "已更新" };
 }
 
@@ -172,8 +172,122 @@ export async function createLedgerBatchAction(
   const { error, data } = await db.from("ledger_entries").insert(payload).select("id");
   if (error) return { ok: false, error: error.message };
 
-  revalidateTag("reports-ledger", "max");
+  updateTag("reports-ledger");
   return { ok: true, inserted: data?.length ?? rows.length };
+}
+
+// ──────────────────────────────────────────────────────────────
+// 可編輯網格：一次儲存新增 / 修改 / 刪除
+// ──────────────────────────────────────────────────────────────
+
+export type GridUpsertRow = { id?: string } & BatchRow;
+
+export async function saveLedgerGridAction(input: {
+  upserts: GridUpsertRow[];
+  deletes: string[];
+}): Promise<
+  | { ok: true; inserted: number; updated: number; deleted: number }
+  | { ok: false; error: string }
+> {
+  const adminId = await requireAdminId();
+  const upserts = input.upserts ?? [];
+  const deletes = input.deletes ?? [];
+
+  if (upserts.length === 0 && deletes.length === 0) {
+    return { ok: false, error: "沒有任何變更需要儲存" };
+  }
+  if (upserts.length > 500) return { ok: false, error: "一次最多只能存 500 列，請分批" };
+
+  // 逐列驗證（沿用 EntrySchema，錯誤訊息已是中文）
+  const validated: { id?: string; row: z.infer<typeof EntrySchema> }[] = [];
+  for (let i = 0; i < upserts.length; i++) {
+    const u = upserts[i];
+    const parsed = EntrySchema.safeParse({
+      entryDate: u.entryDate,
+      departmentId: u.departmentId,
+      carOrPerson: u.carOrPerson ?? "",
+      item: u.item,
+      income: u.income ?? 0,
+      expense: u.expense ?? 0,
+      note1: u.note1 ?? "",
+      note2: u.note2 ?? "",
+    });
+    if (!parsed.success) {
+      const msg = parsed.error.issues[0]?.message ?? "這列資料有點問題";
+      return { ok: false, error: `第 ${i + 1} 列：${msg}` };
+    }
+    validated.push({ id: u.id, row: parsed.data });
+  }
+
+  const db = supabaseAdmin();
+  const dbFail = "儲存時遇到狀況，請稍後再試一次";
+
+  // 新增（無 id）一次寫入
+  const toInsert = validated.filter((v) => !v.id);
+  let inserted = 0;
+  if (toInsert.length) {
+    const payload = toInsert.map((v) => ({
+      entry_date: v.row.entryDate,
+      department_id: v.row.departmentId,
+      car_or_person: v.row.carOrPerson || null,
+      item: v.row.item,
+      income: v.row.income,
+      expense: v.row.expense,
+      note1: v.row.note1 || null,
+      note2: v.row.note2 || null,
+      created_by: adminId,
+    }));
+    const { data, error } = await db
+      .from("ledger_entries")
+      .insert(payload)
+      .select("id");
+    if (error) {
+      console.error("[saveLedgerGrid] insert", error);
+      return { ok: false, error: dbFail };
+    }
+    inserted = data?.length ?? toInsert.length;
+  }
+
+  // 修改（有 id）逐筆更新
+  const toUpdate = validated.filter((v) => v.id);
+  let updated = 0;
+  for (const v of toUpdate) {
+    const { error } = await db
+      .from("ledger_entries")
+      .update({
+        entry_date: v.row.entryDate,
+        department_id: v.row.departmentId,
+        car_or_person: v.row.carOrPerson || null,
+        item: v.row.item,
+        income: v.row.income,
+        expense: v.row.expense,
+        note1: v.row.note1 || null,
+        note2: v.row.note2 || null,
+      })
+      .eq("id", v.id!);
+    if (error) {
+      console.error("[saveLedgerGrid] update", error);
+      return { ok: false, error: dbFail };
+    }
+    updated++;
+  }
+
+  // 刪除（軟刪除）
+  let deleted = 0;
+  if (deletes.length) {
+    const { error } = await db
+      .from("ledger_entries")
+      .update({ deleted_at: new Date().toISOString() })
+      .in("id", deletes);
+    if (error) {
+      console.error("[saveLedgerGrid] delete", error);
+      return { ok: false, error: dbFail };
+    }
+    deleted = deletes.length;
+  }
+
+  updateTag("reports-ledger");
+  return { ok: true, inserted, updated, deleted };
 }
 
 // ──────────────────────────────────────────────────────────────
@@ -193,7 +307,7 @@ export async function softDeleteLedgerEntriesAction(
     .in("id", ids);
   if (error) return { ok: false, error: error.message };
 
-  revalidateTag("reports-ledger", "max");
+  updateTag("reports-ledger");
   return { ok: true };
 }
 

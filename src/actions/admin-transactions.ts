@@ -1,6 +1,6 @@
 "use server";
 
-import { revalidateTag } from "next/cache";
+import { updateTag } from "next/cache";
 import { z } from "zod";
 import { getCurrentAdmin } from "@/lib/admin-session";
 import { supabaseAdmin } from "@/lib/supabase/admin";
@@ -26,12 +26,12 @@ function flatten(err: z.ZodError): Record<string, string> {
 }
 
 function invalidateForMember(memberId: string) {
-  revalidateTag("admin-transactions", "max");
-  revalidateTag("admin-stats", "max");
-  revalidateTag("admin-activity", "max");
-  revalidateTag(`tx-${memberId}`, "max");
-  revalidateTag(`stats-${memberId}`, "max");
-  revalidateTag(`admin-member-${memberId}`, "max");
+  updateTag("admin-transactions");
+  updateTag("admin-stats");
+  updateTag("admin-activity");
+  updateTag(`tx-${memberId}`);
+  updateTag(`stats-${memberId}`);
+  updateTag(`admin-member-${memberId}`);
 }
 
 // ──────────────────────────────────────────────────────────────

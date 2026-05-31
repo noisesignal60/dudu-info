@@ -1,5 +1,6 @@
 import { Suspense } from "react";
 import { getDashboardStats } from "@/data/stats";
+import { getActiveAnnouncements } from "@/data/announcements";
 import { getCurrentMember } from "@/data/member";
 import { getMyTransactions } from "@/data/transactions";
 import { getMyWithdrawals } from "@/data/withdrawals";
@@ -29,6 +30,10 @@ export default function DashboardPage() {
 
       <Suspense fallback={<StatsSkeleton />}>
         <StatsGrid />
+      </Suspense>
+
+      <Suspense fallback={<SkeletonBox h="h-32" />}>
+        <AnnouncementBlock />
       </Suspense>
 
       <Suspense fallback={<SkeletonBox h="h-44" />}>
@@ -114,6 +119,28 @@ async function StatsGrid() {
         </div>
       </div>
     </div>
+  );
+}
+
+async function AnnouncementBlock() {
+  const items = await getActiveAnnouncements();
+  if (items.length === 0) return null;
+  return (
+    <SectionCard title="公告欄">
+      <ul className="space-y-4">
+        {items.map((a) => (
+          <li
+            key={a.id}
+            className="rounded-card border border-hairline bg-canvas p-4"
+          >
+            <p className="font-bold text-ink">{a.title}</p>
+            <p className="mt-1 text-slate-600 whitespace-pre-wrap break-words leading-relaxed">
+              {a.content}
+            </p>
+          </li>
+        ))}
+      </ul>
+    </SectionCard>
   );
 }
 

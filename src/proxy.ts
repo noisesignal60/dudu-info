@@ -36,19 +36,23 @@ export default auth((req: NextRequest & { auth: unknown }) => {
   // -------- 後台 ------------------------------------------------------------
   const hasAdminCookie = !!req.cookies.get(ADMIN_COOKIE)?.value;
 
-  // /admin/login 已登入 → 導到 /admin
+  // 已登入時待在各自的登入頁 → 導回各自首頁
   if (hasAdminCookie && path === "/admin/login") {
     return NextResponse.redirect(new URL("/admin", nextUrl));
   }
+  if (hasAdminCookie && path === "/reports/login") {
+    return NextResponse.redirect(new URL("/reports", nextUrl));
+  }
 
-  // /admin/** 與 /reports/** 未登入 → 導到 /admin/login
-  const isAdminProtected =
-    (path.startsWith("/admin") && path !== "/admin/login") ||
-    path.startsWith("/reports");
+  // 未登入時保護各自區域，但放行各自的登入頁（避免無限導向）
+  const isAdminProtected = path.startsWith("/admin") && path !== "/admin/login";
+  const isReportsProtected = path.startsWith("/reports") && path !== "/reports/login";
 
   if (isAdminProtected && !hasAdminCookie) {
-    const url = new URL("/admin/login", nextUrl);
-    return NextResponse.redirect(url);
+    return NextResponse.redirect(new URL("/admin/login", nextUrl));
+  }
+  if (isReportsProtected && !hasAdminCookie) {
+    return NextResponse.redirect(new URL("/reports/login", nextUrl));
   }
 
   return NextResponse.next();

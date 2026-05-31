@@ -1,0 +1,65 @@
+/**
+ * 台灣本國銀行清單（財金公司 3 碼金融機構代號）。
+ * 供銀行代碼下拉選單（BankSelect）與 server action 驗證、後台顯示共用。
+ * 來源：財金公司／各行庫公告之跨行代號，依代碼排序。
+ */
+export type Bank = { code: string; name: string };
+
+export const TAIWAN_BANKS: Bank[] = [
+  { code: "004", name: "臺灣銀行" },
+  { code: "005", name: "臺灣土地銀行" },
+  { code: "006", name: "合作金庫商業銀行" },
+  { code: "007", name: "第一商業銀行" },
+  { code: "008", name: "華南商業銀行" },
+  { code: "009", name: "彰化商業銀行" },
+  { code: "011", name: "上海商業儲蓄銀行" },
+  { code: "012", name: "台北富邦商業銀行" },
+  { code: "013", name: "國泰世華商業銀行" },
+  { code: "016", name: "高雄銀行" },
+  { code: "017", name: "兆豐國際商業銀行" },
+  { code: "021", name: "花旗（台灣）商業銀行" },
+  { code: "048", name: "王道商業銀行" },
+  { code: "050", name: "臺灣中小企業銀行" },
+  { code: "052", name: "渣打國際商業銀行" },
+  { code: "053", name: "台中商業銀行" },
+  { code: "054", name: "京城商業銀行" },
+  { code: "081", name: "滙豐（台灣）商業銀行" },
+  { code: "101", name: "瑞興商業銀行" },
+  { code: "102", name: "華泰商業銀行" },
+  { code: "103", name: "臺灣新光商業銀行" },
+  { code: "108", name: "陽信商業銀行" },
+  { code: "118", name: "板信商業銀行" },
+  { code: "147", name: "三信商業銀行" },
+  { code: "700", name: "中華郵政" },
+  { code: "803", name: "聯邦商業銀行" },
+  { code: "805", name: "遠東國際商業銀行" },
+  { code: "806", name: "元大商業銀行" },
+  { code: "807", name: "永豐商業銀行" },
+  { code: "808", name: "玉山商業銀行" },
+  { code: "809", name: "凱基商業銀行" },
+  { code: "810", name: "星展（台灣）商業銀行" },
+  { code: "812", name: "台新國際商業銀行" },
+  { code: "815", name: "日盛國際商業銀行" },
+  { code: "816", name: "安泰商業銀行" },
+  { code: "822", name: "中國信託商業銀行" },
+  { code: "823", name: "將來商業銀行" },
+  { code: "824", name: "連線商業銀行（LINE Bank）" },
+  { code: "826", name: "樂天國際商業銀行" },
+];
+
+const BANK_MAP = new Map(TAIWAN_BANKS.map((b) => [b.code, b.name]));
+
+/** 是否為清單內的有效銀行代碼。 */
+export function isValidBankCode(code: string): boolean {
+  return BANK_MAP.has(code);
+}
+
+/**
+ * 顯示用：已知代碼→「004 臺灣銀行」；未知非空值→原樣回傳；空值/null→null。
+ * 回傳 null 讓呼叫端的 `?? "—"` 仍正常運作。
+ */
+export function bankLabel(code: string | null | undefined): string | null {
+  if (!code) return null;
+  const name = BANK_MAP.get(code);
+  return name ? `${code} ${name}` : code;
+}

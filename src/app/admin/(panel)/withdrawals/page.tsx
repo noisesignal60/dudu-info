@@ -7,6 +7,7 @@ import {
 } from "@/data/admin/withdrawals";
 import { getPassbookSignedUrl } from "@/data/admin/members";
 import { formatCurrency, formatDateTime, cn } from "@/lib/utils";
+import { bankLabel } from "@/lib/banks";
 import { ReviewButton } from "./review-button";
 import { Badge } from "@/ui/badge";
 import {
@@ -140,7 +141,7 @@ async function Listing({ searchParams }: { searchParams: SearchParams }) {
             <TableRow>
               <TableHead>申請時間</TableHead>
               <TableHead>用戶</TableHead>
-              <TableHead className="text-right">提領金額</TableHead>
+              <TableHead>提領金額</TableHead>
               <TableHead>銀行</TableHead>
               <TableHead>帳號</TableHead>
               <TableHead>備註</TableHead>
@@ -167,7 +168,7 @@ async function Listing({ searchParams }: { searchParams: SearchParams }) {
                   <TableCell className="text-right font-bold text-money tabular-nums">
                     {formatCurrency(w.amount)}
                   </TableCell>
-                  <TableCell>{w.bankCode ?? "—"}</TableCell>
+                  <TableCell>{bankLabel(w.bankCode) ?? "—"}</TableCell>
                   <TableCell>{w.bankAccount ?? "—"}</TableCell>
                   <TableCell className="max-w-[200px] truncate text-slate-600">
                     {w.note ?? "—"}
@@ -219,7 +220,7 @@ async function Listing({ searchParams }: { searchParams: SearchParams }) {
 
             <dl className="grid grid-cols-2 gap-x-3 gap-y-1 text-sm">
               <dt className="text-slate-500">銀行</dt>
-              <dd className="text-ink text-right">{w.bankCode ?? "—"}</dd>
+              <dd className="text-ink text-right">{bankLabel(w.bankCode) ?? "—"}</dd>
               <dt className="text-slate-500">帳號</dt>
               <dd className="text-ink text-right break-all">{w.bankAccount ?? "—"}</dd>
               {w.note && (

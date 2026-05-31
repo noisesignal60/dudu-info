@@ -213,7 +213,7 @@ async function Listing({ searchParams }: { searchParams: SearchParams }) {
               <TableHead>類型</TableHead>
               <TableHead>主要對象</TableHead>
               <TableHead>交易名目</TableHead>
-              <TableHead className="text-right">金額</TableHead>
+              <TableHead>金額</TableHead>
               <TableHead>描述</TableHead>
               <TableHead className="text-center">操作</TableHead>
             </TableRow>
