@@ -214,7 +214,7 @@ async function Listing({ searchParams }: { searchParams: SearchParams }) {
               <TableHead>交易名目</TableHead>
               <TableHead className="text-right">金額</TableHead>
               <TableHead>描述</TableHead>
-              <TableHead className="text-right">操作</TableHead>
+              <TableHead className="text-center">操作</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -251,7 +251,7 @@ async function Listing({ searchParams }: { searchParams: SearchParams }) {
                   <TableCell className="max-w-[240px] truncate text-slate-600">
                     {t.description ?? "—"}
                   </TableCell>
-                  <TableCell className="text-right">
+                  <TableCell className="text-center">
                     <EditTxButton tx={t} />
                   </TableCell>
                 </TableRow>

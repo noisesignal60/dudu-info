@@ -17,9 +17,9 @@ import {
 import { Alert } from "@/ui/alert";
 import { Skeleton } from "@/ui/skeleton";
 import { EmptyState } from "@/ui/empty-state";
-import { MemberBasicForm } from "./member-basic-form";
 import { MemberBalanceForm } from "./member-balance-form";
 import { PassbookViewer } from "./passbook-viewer";
+import { PassbookReplaceForm } from "./passbook-replace-form";
 import { DeleteMemberButton } from "./delete-member-button";
 
 type Params = Promise<{ id: string }>;
@@ -100,20 +100,28 @@ async function MemberDetail({ params }: { params: Params }) {
             <CardTitle>基本與銀行資料</CardTitle>
           </CardHeader>
           <CardContent>
-            <MemberBasicForm member={m} />
+            <div className="grid grid-cols-2 gap-4">
+              <Field label="姓名" value={m.name} />
+              <Field label="Email" value={m.email} />
+              <Field label="電話" value={m.phone} />
+              <Field label="銀行戶名" value={m.bankHolder} />
+              <Field label="銀行代碼" value={m.bankCode} />
+              <Field label="銀行帳號" value={m.bankAccount} />
+            </div>
           </CardContent>
         </Card>
         <Card>
           <CardHeader>
             <div>
               <CardTitle>銀行存摺圖片</CardTitle>
-              <CardDescription>憑證，不可更換</CardDescription>
+              <CardDescription>可重新上傳更換</CardDescription>
             </div>
           </CardHeader>
-          <CardContent>
+          <CardContent className="space-y-4">
             <Suspense fallback={<Skeleton className="h-60" />}>
               <PassbookBlock storagePath={m.passbookUrl} />
             </Suspense>
+            <PassbookReplaceForm memberId={m.id} />
           </CardContent>
         </Card>
       </div>

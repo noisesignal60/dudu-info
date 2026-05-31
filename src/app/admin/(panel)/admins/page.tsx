@@ -56,7 +56,7 @@ async function AdminTable() {
               <TableHead>建立時間</TableHead>
               <TableHead>最後登入</TableHead>
               <TableHead>狀態</TableHead>
-              <TableHead className="text-right">操作</TableHead>
+              <TableHead className="text-center">操作</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -92,7 +92,7 @@ async function AdminTable() {
                       </Badge>
                     )}
                   </TableCell>
-                  <TableCell className="text-right">
+                  <TableCell className="text-center">
                     <AdminListActions mode="row" admin={a} isSelf={isSelf} />
                   </TableCell>
                 </TableRow>

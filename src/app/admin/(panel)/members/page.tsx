@@ -3,7 +3,6 @@ import Link from "next/link";
 import { listMembers } from "@/data/admin/members";
 import { formatCurrency, formatDateTime } from "@/lib/utils";
 import { MemberSearchBar } from "./member-search-bar";
-import { MemberAvatarPreview } from "./member-avatar-preview";
 import { Button } from "@/ui/button";
 import { Badge } from "@/ui/badge";
 import {
@@ -79,42 +78,24 @@ async function MemberTable({ searchParams }: { searchParams: SearchParams }) {
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead>LINE 頭像</TableHead>
-                <TableHead>LINE 顯示名稱</TableHead>
-                <TableHead>LINE ID</TableHead>
-                <TableHead>姓名</TableHead>
-                <TableHead>Email</TableHead>
-                <TableHead>電話</TableHead>
-                <TableHead>推薦碼</TableHead>
-                <TableHead>上級</TableHead>
-                <TableHead className="text-right">總收益</TableHead>
-                <TableHead className="text-right">待領取</TableHead>
-                <TableHead className="text-right">已領取</TableHead>
-                <TableHead className="text-right">下包數</TableHead>
-                <TableHead>註冊時間</TableHead>
-                <TableHead className="text-right">操作</TableHead>
+                <TableHead className="text-center">LINE 顯示名稱</TableHead>
+                <TableHead className="text-center">姓名</TableHead>
+                <TableHead className="text-center">Email</TableHead>
+                <TableHead className="text-center">電話</TableHead>
+                <TableHead className="text-center">推薦碼</TableHead>
+                <TableHead className="text-center">上級</TableHead>
+                <TableHead className="text-center">總收益</TableHead>
+                <TableHead className="text-center">待領取</TableHead>
+                <TableHead className="text-center">已領取</TableHead>
+                <TableHead className="text-center">下包數</TableHead>
+                <TableHead className="text-center">註冊時間</TableHead>
+                <TableHead className="text-center">操作</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {rows.map((m) => (
                 <TableRow key={m.id}>
-                  <TableCell>
-                    <MemberAvatarPreview
-                      src={m.lineAvatarUrl}
-                      alt={m.lineDisplay ?? "LINE"}
-                    />
-                  </TableCell>
                   <TableCell>{m.lineDisplay ?? "—"}</TableCell>
-                  <TableCell>
-                    <Badge
-                      variant="neutral"
-                      size="sm"
-                      className="font-mono"
-                      title={m.lineUserId}
-                    >
-                      {shorten(m.lineUserId)}
-                    </Badge>
-                  </TableCell>
                   <TableCell>{m.name ?? "—"}</TableCell>
                   <TableCell className="max-w-[180px] truncate">{m.email ?? "—"}</TableCell>
                   <TableCell>{m.phone ?? "—"}</TableCell>
@@ -149,7 +130,7 @@ async function MemberTable({ searchParams }: { searchParams: SearchParams }) {
                   <TableCell className="text-xs text-slate-500 whitespace-nowrap">
                     {formatDateTime(m.createdAt)}
                   </TableCell>
-                  <TableCell className="text-right">
+                  <TableCell className="text-center">
                     <Button variant="link" size="sm" asChild>
                       <Link href={`/admin/members/${m.id}`}>檢視</Link>
                     </Button>
@@ -166,11 +147,6 @@ async function MemberTable({ searchParams }: { searchParams: SearchParams }) {
       )}
     </div>
   );
-}
-
-function shorten(s: string): string {
-  if (s.length <= 14) return s;
-  return `${s.slice(0, 6)}…${s.slice(-4)}`;
 }
 
 function Pagination({

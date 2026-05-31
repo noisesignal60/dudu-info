@@ -5,20 +5,9 @@ import { redirect } from "next/navigation";
 import { z } from "zod";
 import { getCurrentAdmin } from "@/lib/admin-session";
 import { supabaseAdmin } from "@/lib/supabase/admin";
+import { addPassbookWatermark } from "@/lib/watermark";
 
-const UpdateMemberSchema = z.object({
-  name: z.string().trim().max(50).optional().default(""),
-  phone: z.string().trim().max(20).optional().default(""),
-  email: z.string().trim().max(200).optional().default(""),
-  bankHolder: z.string().trim().max(50).optional().default(""),
-  bankCode: z.string().trim().max(10).optional().default(""),
-  bankAccount: z
-    .string()
-    .trim()
-    .regex(/^\d{10,16}$|^$/u, "銀行帳號格式錯誤")
-    .optional()
-    .default(""),
-});
+const PASSBOOK_BUCKET = process.env.SUPABASE_BUCKET_PASSBOOK || "passbooks";
 
 const UpdateBalanceSchema = z.object({
   totalEarned: z.coerce.number().min(0),
@@ -35,53 +24,6 @@ async function requireAdmin(): Promise<{ id: string }> {
   const admin = await getCurrentAdmin();
   if (!admin?.adminId) throw new Error("Unauthorized");
   return { id: admin.adminId };
-}
-
-export async function updateMemberBasicAction(
-  memberId: string,
-  _prev: AdminMemberFormState | null,
-  formData: FormData,
-): Promise<AdminMemberFormState> {
-  await requireAdmin();
-
-  const parsed = UpdateMemberSchema.safeParse({
-    name: formData.get("name"),
-    phone: formData.get("phone"),
-    email: formData.get("email"),
-    bankHolder: formData.get("bankHolder"),
-    bankCode: formData.get("bankCode"),
-    bankAccount: formData.get("bankAccount"),
-  });
-  if (!parsed.success) {
-    const fieldErrors: Record<string, string> = {};
-    for (const issue of parsed.error.issues) {
-      const key = issue.path[0]?.toString() ?? "_";
-      if (!fieldErrors[key]) fieldErrors[key] = issue.message;
-    }
-    return { ok: false, fieldErrors };
-  }
-
-  const db = supabaseAdmin();
-  const { error } = await db
-    .from("members")
-    .update({
-      name: parsed.data.name || null,
-      phone: parsed.data.phone || null,
-      email: parsed.data.email || null,
-      bank_holder: parsed.data.bankHolder || null,
-      bank_code: parsed.data.bankCode || null,
-      bank_account: parsed.data.bankAccount || null,
-    })
-    .eq("id", memberId);
-  if (error) {
-    console.error("[admin-members] update error", error);
-    return { ok: false, error: "儲存失敗：" + error.message };
-  }
-
-  revalidateTag(`admin-member-${memberId}`, "max");
-  revalidateTag(`member-${memberId}`, "max");
-  revalidateTag("admin-members", "max");
-  return { ok: true, message: "已儲存基本資料" };
 }
 
 export async function updateMemberBalanceAction(
@@ -134,4 +76,46 @@ export async function deleteMemberAction(memberId: string): Promise<void> {
   }
   revalidateTag("admin-members", "max");
   redirect("/admin/members");
+}
+
+export async function replaceMemberPassbookAction(
+  memberId: string,
+  _prev: AdminMemberFormState | null,
+  formData: FormData,
+): Promise<AdminMemberFormState> {
+  await requireAdmin();
+
+  const file = formData.get("passbook");
+  if (!(file instanceof File) || file.size === 0) {
+    return { ok: false, fieldErrors: { passbook: "請選擇銀行存摺圖片" } };
+  }
+  if (file.size > 8 * 1024 * 1024) {
+    return { ok: false, fieldErrors: { passbook: "圖片過大，請小於 8 MB" } };
+  }
+
+  // 加浮水印 + 上傳到新路徑（保留舊檔，不覆蓋）
+  const watermarked = await addPassbookWatermark(await file.arrayBuffer());
+  const path = `${memberId}/${Date.now()}.jpg`;
+
+  const db = supabaseAdmin();
+  const upload = await db.storage
+    .from(PASSBOOK_BUCKET)
+    .upload(path, watermarked, { contentType: "image/jpeg", upsert: false });
+  if (upload.error) {
+    console.error("[admin-members] passbook upload error", upload.error);
+    return { ok: false, error: "圖片上傳失敗，請稍後再試" };
+  }
+
+  const { error } = await db
+    .from("members")
+    .update({ passbook_url: path })
+    .eq("id", memberId);
+  if (error) {
+    console.error("[admin-members] passbook update error", error);
+    return { ok: false, error: "儲存失敗：" + error.message };
+  }
+
+  revalidateTag(`admin-member-${memberId}`, "max");
+  revalidateTag(`member-${memberId}`, "max");
+  return { ok: true, message: "已更換存摺圖片" };
 }

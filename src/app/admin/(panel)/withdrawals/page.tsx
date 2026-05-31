@@ -135,7 +135,7 @@ async function Listing({ searchParams }: { searchParams: SearchParams }) {
               <TableHead>備註</TableHead>
               <TableHead>狀態</TableHead>
               <TableHead>處理時間</TableHead>
-              <TableHead className="text-right">操作</TableHead>
+              <TableHead className="text-center">操作</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -170,7 +170,7 @@ async function Listing({ searchParams }: { searchParams: SearchParams }) {
                   <TableCell className="text-xs text-slate-500 whitespace-nowrap">
                     {w.processedAt ? formatDateTime(w.processedAt) : "—"}
                   </TableCell>
-                  <TableCell className="text-right">
+                  <TableCell className="text-center">
                     <ReviewButton withdrawal={w} passbookUrl={signedUrl} />
                   </TableCell>
                 </TableRow>

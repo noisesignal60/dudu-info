@@ -2,7 +2,6 @@ import { Suspense } from "react";
 import { auth, signOut } from "@/auth";
 import Image from "next/image";
 import { redirect } from "next/navigation";
-import { SupportFab } from "@/ui/support-fab";
 import { Button } from "@/ui/button";
 import { Skeleton } from "@/ui/skeleton";
 
@@ -29,8 +28,6 @@ export default function DashboardLayout({
       </header>
 
       <main className="max-w-3xl mx-auto px-4 py-5 pb-24">{children}</main>
-
-      <SupportFab />
     </div>
   );
 }
