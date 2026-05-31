@@ -1,5 +1,6 @@
 import NextAuth from "next-auth";
 import LINE from "next-auth/providers/line";
+import Credentials from "next-auth/providers/credentials";
 import { supabaseAdmin } from "@/lib/supabase/admin";
 
 /**
@@ -10,23 +11,52 @@ import { supabaseAdmin } from "@/lib/supabase/admin";
  *   session callback → 帶 memberId / profileCompleted 進 session
  *   proxy.ts 用 session 做樂觀檢查；DAL 用 session.memberId 查資料。
  */
+
+/**
+ * 是否為非正式環境。僅在此情況下啟用「開發測試登入」provider，
+ * 讓開發時可跳過 LINE OAuth、直接建立一個測試會員 session。
+ * 正式環境（NODE_ENV=production）絕不啟用。
+ */
+const DEV_LOGIN_ENABLED = process.env.NODE_ENV !== "production";
+
+/** 開發測試會員固定的「假 LINE user id」——沿用既有以 line_user_id 為主鍵的流程 */
+const DEV_LINE_USER_ID = "dev-line-user-001";
+
 export const { handlers, auth, signIn, signOut } = NextAuth({
   trustHost: true,
   providers: [
     LINE({
       clientId: process.env.AUTH_LINE_ID,
       clientSecret: process.env.AUTH_LINE_SECRET,
-      authorization: { params: { scope: "profile openid email" } },
+      authorization: { params: { scope: "profile openid" } },
     }),
+    // 僅開發環境：跳過 LINE，直接以測試會員登入
+    ...(DEV_LOGIN_ENABLED
+      ? [
+          Credentials({
+            id: "dev-login",
+            name: "開發測試登入",
+            credentials: {},
+            // user.id 會成為 account.providerAccountId，下游 callback 當成 lineUserId 使用
+            authorize: async () => ({
+              id: DEV_LINE_USER_ID,
+              name: "測試司機",
+              email: null,
+              image: null,
+            }),
+          }),
+        ]
+      : []),
   ],
   pages: {
     signIn: "/login",
   },
   session: { strategy: "jwt" },
   callbacks: {
-    /** LINE 登入成功時：upsert 會員主檔 */
+    /** LINE 登入成功時：upsert 會員主檔（開發測試登入走相同流程） */
     async signIn({ user, account, profile }) {
-      if (account?.provider !== "line") return false;
+      const isDevLogin = DEV_LOGIN_ENABLED && account?.provider === "dev-login";
+      if (account?.provider !== "line" && !isDevLogin) return false;
 
       const lineUserId =
         (profile as { sub?: string } | undefined)?.sub ??
@@ -99,6 +129,23 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
           token.lineUserId = lineUserId;
         }
       }
+
+      // 完成 onboarding 後，舊的 JWT 仍帶著 profileCompleted=false，
+      // 會被 proxy 從 /dashboard 彈回 /onboarding（看起來像「沒轉頁」）。
+      // 在尚未完成前每次請求重讀 DB；一旦完成即不再查詢。
+      if (token.memberId && token.profileCompleted !== true) {
+        const db = supabaseAdmin();
+        const { data } = await db
+          .from("members")
+          .select("profile_completed, name")
+          .eq("id", token.memberId as string)
+          .maybeSingle();
+        if (data) {
+          token.profileCompleted = data.profile_completed;
+          token.displayName = data.name ?? token.displayName;
+        }
+      }
+
       return token;
     },
 

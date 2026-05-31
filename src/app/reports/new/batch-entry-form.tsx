@@ -1,19 +1,32 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useReducer, useState } from "react";
-import {
-  Plus,
-  Save,
-  Undo2,
-  Redo2,
-  Trash2,
-  RotateCcw,
-} from "lucide-react";
+import { Trash2 } from "lucide-react";
 import {
   createLedgerBatchAction,
   type BatchRow,
 } from "@/actions/reports-ledger";
 import type { Department } from "@/data/reports/departments";
+import {
+  Table,
+  TableHeader,
+  TableBody,
+  TableRow,
+  TableHead,
+  TableCell,
+} from "@/ui/table";
+import { Button } from "@/ui/button";
+import { Alert } from "@/ui/alert";
+import { cn } from "@/lib/utils";
+
+/** 逐列原生 input/select 的 token 樣式（受控於 undo/redo state，故保留原生元素）。 */
+function cellInput(extra?: string) {
+  return cn(
+    "rounded-xl border border-hairline bg-surface min-h-10 px-3 text-sm outline-none " +
+      "focus-visible:border-brand focus-visible:ring-4 focus-visible:ring-ring/25 transition-[color,box-shadow]",
+    extra,
+  );
+}
 
 type Row = {
   key: string;
@@ -219,74 +232,57 @@ export function BatchEntryForm({
   return (
     <div className="space-y-4">
       {/* 工具列 */}
-      <div className="bg-white border border-slate-200 rounded-2xl p-3 flex flex-wrap items-center gap-2">
-        <button
+      <div className="bg-surface border border-hairline rounded-card shadow-premium-sm p-3 flex flex-wrap items-center gap-2">
+        <Button
           type="button"
+          variant="secondary"
+          size="sm"
           onClick={() => dispatch({ type: "undo" })}
           disabled={!canUndo}
-          className="btn-secondary !min-h-10 !text-sm disabled:opacity-40"
         >
-          <Undo2 className="w-4 h-4" />
           復原
-        </button>
-        <button
+        </Button>
+        <Button
           type="button"
+          variant="secondary"
+          size="sm"
           onClick={() => dispatch({ type: "redo" })}
           disabled={!canRedo}
-          className="btn-secondary !min-h-10 !text-sm disabled:opacity-40"
         >
-          <Redo2 className="w-4 h-4" />
           重做
-        </button>
-        <div className="w-px h-6 bg-slate-200 mx-1" />
-        <button
-          type="button"
-          onClick={addRow}
-          className="btn-secondary !min-h-10 !text-sm"
-        >
-          <Plus className="w-4 h-4" />
+        </Button>
+        <div className="w-px h-6 bg-hairline mx-1" />
+        <Button type="button" variant="secondary" size="sm" onClick={addRow}>
           新增一列
-        </button>
-        <button
-          type="button"
-          onClick={reset}
-          className="btn-secondary !min-h-10 !text-sm"
-        >
-          <RotateCcw className="w-4 h-4" />
+        </Button>
+        <Button type="button" variant="secondary" size="sm" onClick={reset}>
           清除暫存
-        </button>
+        </Button>
         <div className="ml-auto inline-flex items-center gap-3">
           {flash && (
             <span
               className={`text-sm font-medium ${
-                flash.ok ? "text-green-700" : "text-red-600"
+                flash.ok ? "text-positive" : "text-money"
               }`}
             >
               {flash.msg}
             </span>
           )}
-          <button
-            type="button"
-            onClick={onSubmit}
-            disabled={pending}
-            className="btn-primary !min-h-10 !text-sm"
-          >
-            <Save className="w-4 h-4" />
+          <Button type="button" size="sm" onClick={onSubmit} disabled={pending}>
             {pending ? "儲存中..." : "儲存"}
-          </button>
+          </Button>
         </div>
       </div>
 
-      <p className="text-sm text-amber-700 bg-amber-50 px-4 py-2 rounded-xl">
+      <Alert variant="warning">
         提示：收入請填正數，支出請填正數。系統自動以欄位區分。所有變更會自動暫存到本機。
-      </p>
+      </Alert>
 
       {/* 多列輸入 */}
-      <div className="bg-white border border-slate-200 rounded-2xl overflow-hidden">
-        <div className="overflow-x-auto">
-          <table className="w-full text-sm">
-            <thead className="bg-slate-50 text-slate-600">
-              <tr className="text-left">
+      <div className="rounded-card border border-hairline overflow-hidden">
+        <Table>
+          <TableHeader>
+            <TableRow className="bg-background hover:bg-background text-left">
                 <Th className="w-10">#</Th>
                 <Th>日期 *</Th>
                 <Th>部門名稱 *</Th>
@@ -297,29 +293,29 @@ export function BatchEntryForm({
                 <Th>備註1</Th>
                 <Th>備註2</Th>
                 <Th align="right">操作</Th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-slate-100">
-              {state.present.map((row, idx) => (
-                <tr key={row.key} className="hover:bg-slate-50/50">
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {state.present.map((row, idx) => (
+              <TableRow key={row.key}>
                   <Td className="text-slate-400 text-xs">{idx + 1}</Td>
-                  <Td className="!p-1.5">
+                  <Td className="p-1.5">
                     <input
                       type="date"
                       value={row.entryDate}
                       onChange={(e) =>
                         update(idx, { entryDate: e.target.value })
                       }
-                      className="input-base !min-h-9 !text-sm !w-36"
+                      className={cellInput("w-36")}
                     />
                   </Td>
-                  <Td className="!p-1.5">
+                  <Td className="p-1.5">
                     <select
                       value={row.departmentId}
                       onChange={(e) =>
                         update(idx, { departmentId: e.target.value })
                       }
-                      className="input-base !min-h-9 !text-sm !w-32"
+                      className={cellInput("w-32")}
                     >
                       <option value="">請選擇</option>
                       {departments.map((d) => (
@@ -329,35 +325,37 @@ export function BatchEntryForm({
                       ))}
                     </select>
                   </Td>
-                  <Td className="!p-1.5">
+                  <Td className="p-1.5">
                     <input
                       type="text"
                       value={row.carOrPerson}
                       onChange={(e) =>
                         update(idx, { carOrPerson: e.target.value })
                       }
-                      className="input-base !min-h-9 !text-sm !w-32"
+                      className={cellInput("w-32")}
                     />
                   </Td>
-                  <Td className="!p-1.5">
+                  <Td className="p-1.5">
                     <input
                       type="text"
                       value={row.item}
                       onChange={(e) => update(idx, { item: e.target.value })}
-                      className="input-base !min-h-9 !text-sm !w-32"
+                      className={cellInput("w-32")}
                     />
                   </Td>
-                  <Td className="!p-1.5">
+                  <Td className="p-1.5">
                     <input
                       type="number"
                       step="0.01"
                       value={row.income}
                       onChange={(e) => update(idx, { income: e.target.value })}
-                      className="input-base !min-h-9 !text-sm !w-24 text-right text-positive font-bold"
+                      className={cellInput(
+                        "w-24 text-right text-positive font-bold",
+                      )}
                       placeholder="0"
                     />
                   </Td>
-                  <Td className="!p-1.5">
+                  <Td className="p-1.5">
                     <input
                       type="number"
                       step="0.01"
@@ -365,41 +363,44 @@ export function BatchEntryForm({
                       onChange={(e) =>
                         update(idx, { expense: e.target.value })
                       }
-                      className="input-base !min-h-9 !text-sm !w-24 text-right text-money font-bold"
+                      className={cellInput(
+                        "w-24 text-right text-money font-bold",
+                      )}
                       placeholder="0"
                     />
                   </Td>
-                  <Td className="!p-1.5">
+                  <Td className="p-1.5">
                     <input
                       type="text"
                       value={row.note1}
                       onChange={(e) => update(idx, { note1: e.target.value })}
-                      className="input-base !min-h-9 !text-sm !w-32"
+                      className={cellInput("w-32")}
                     />
                   </Td>
-                  <Td className="!p-1.5">
+                  <Td className="p-1.5">
                     <input
                       type="text"
                       value={row.note2}
                       onChange={(e) => update(idx, { note2: e.target.value })}
-                      className="input-base !min-h-9 !text-sm !w-32"
+                      className={cellInput("w-32")}
                     />
                   </Td>
-                  <Td align="right" className="!p-1.5">
-                    <button
+                  <Td align="right" className="p-1.5">
+                    <Button
                       type="button"
+                      variant="ghost"
+                      size="icon"
                       onClick={() => removeRow(idx)}
-                      className="text-red-600 hover:text-red-700 p-1.5"
+                      className="text-money"
                       aria-label="移除此列"
                     >
-                      <Trash2 className="w-4 h-4" />
-                    </button>
+                      <Trash2 />
+                    </Button>
                   </Td>
-                </tr>
+                </TableRow>
               ))}
-            </tbody>
-          </table>
-        </div>
+          </TableBody>
+        </Table>
       </div>
 
       <div className="text-sm text-slate-500">
@@ -420,13 +421,13 @@ function Th({
   className?: string;
 }) {
   return (
-    <th
-      className={`px-3 py-3 text-xs font-bold uppercase whitespace-nowrap ${
+    <TableHead
+      className={`text-xs font-bold uppercase ${
         align === "right" ? "text-right" : "text-left"
       } ${className}`}
     >
       {children}
-    </th>
+    </TableHead>
   );
 }
 
@@ -440,10 +441,10 @@ function Td({
   align?: "left" | "right";
 }) {
   return (
-    <td
-      className={`px-3 py-2.5 ${align === "right" ? "text-right" : "text-left"} ${className}`}
+    <TableCell
+      className={`${align === "right" ? "text-right" : "text-left"} ${className}`}
     >
       {children}
-    </td>
+    </TableCell>
   );
 }

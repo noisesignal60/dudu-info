@@ -1,4 +1,5 @@
 import { Suspense } from "react";
+import { Skeleton } from "@/ui/skeleton";
 import { listDepartments } from "@/data/reports/departments";
 import { listLedger, type LedgerSortKey } from "@/data/reports/ledger";
 import { LedgerStatsBar } from "../_components/stats-bar";
@@ -21,10 +22,10 @@ export default function ReportsDailyPage({
   searchParams: SearchParams;
 }) {
   return (
-    <div className="space-y-5">
+    <div className="space-y-6">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
-          <h1 className="text-2xl font-black text-slate-900">日報表</h1>
+          <h1 className="font-serif text-2xl font-black text-slate-900">日報表</h1>
           <p className="text-slate-500 mt-1 text-sm">
             依日期排序的明細表，可篩選部門與月份
           </p>
@@ -35,13 +36,13 @@ export default function ReportsDailyPage({
       </div>
 
       <Suspense
-        fallback={<div className="h-14 bg-slate-200 rounded-2xl animate-pulse" />}
+        fallback={<Skeleton className="h-14 rounded-card" />}
       >
         <FilterBlock searchParams={searchParams} />
       </Suspense>
 
       <Suspense
-        fallback={<div className="h-24 bg-slate-200 rounded-2xl animate-pulse" />}
+        fallback={<Skeleton className="h-24 rounded-card" />}
       >
         <Content searchParams={searchParams} />
       </Suspense>

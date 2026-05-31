@@ -11,8 +11,9 @@ import { WithdrawalForm } from "./withdrawal-form";
 import { ProfileBlock } from "./profile-block";
 import { TransactionList } from "./transaction-list";
 import { WithdrawalStatusBadge } from "./withdrawal-badge";
+import { Skeleton } from "@/ui/skeleton";
+import { EmptyState } from "@/ui/empty-state";
 import { formatCurrency, formatDateTime } from "@/lib/utils";
-import { Wallet, Banknote, Clock, CheckCircle2, Users, Network } from "lucide-react";
 
 export const metadata = {
   title: "分潤系統 ｜ 嘟嘟資訊網",
@@ -20,7 +21,7 @@ export const metadata = {
 
 export default function DashboardPage() {
   return (
-    <div className="space-y-5">
+    <div className="space-y-8">
       {/* 歡迎 — 含使用者名稱，動態，需 Suspense */}
       <Suspense fallback={<WelcomeSkeleton />}>
         <WelcomeBlock />
@@ -58,7 +59,7 @@ async function WelcomeBlock() {
   const name = me?.name || me?.lineDisplay || "司機";
   return (
     <section className="px-1">
-      <h2 className="text-2xl font-black text-slate-900">
+      <h2 className="text-2xl font-black text-ink font-serif tracking-tight">
         歡迎回來，{name}！
       </h2>
       <p className="text-slate-500 mt-1">查看您的收益與推薦狀況</p>
@@ -69,8 +70,8 @@ async function WelcomeBlock() {
 function WelcomeSkeleton() {
   return (
     <section className="px-1 space-y-2">
-      <div className="h-8 w-60 bg-slate-200 animate-pulse rounded" />
-      <div className="h-4 w-40 bg-slate-200 animate-pulse rounded" />
+      <Skeleton className="h-8 w-60 rounded" />
+      <Skeleton className="h-4 w-40 rounded" />
     </section>
   );
 }
@@ -79,42 +80,39 @@ async function StatsGrid() {
   const stats = await getDashboardStats();
   if (!stats) return null;
   return (
-    <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
-      <StatCard
-        label="總金額"
-        value={stats.totalAmount}
-        icon={<Wallet className="w-5 h-5" />}
-      />
-      <StatCard
-        label="待領取金額"
-        value={stats.pendingAmount}
-        variant="highlight"
-        icon={<Banknote className="w-6 h-6" />}
-      />
-      <StatCard
-        label="已領取金額"
-        value={stats.withdrawnAmount}
-        icon={<CheckCircle2 className="w-5 h-5" />}
-      />
-      <StatCard
-        label="審核中金額"
-        value={stats.lockedAmount}
-        icon={<Clock className="w-5 h-5" />}
-      />
-      <StatCard
-        label="我的推薦人數"
-        value={stats.referralCount}
-        isMoney={false}
-        unit="人"
-        icon={<Users className="w-5 h-5" />}
-      />
-      <StatCard
-        label="我的網絡人數"
-        value={stats.networkCount}
-        isMoney={false}
-        unit="人"
-        icon={<Network className="w-5 h-5" />}
-      />
+    <div className="space-y-3">
+      {/* Hero：待領取金額（最重要、可立即提領）— 深藍焦點 */}
+      <div className="rounded-card border border-accent-blue/20 bg-accent-blue-soft p-4">
+        <p className="eyebrow text-accent-blue/70">待領取金額</p>
+        <p className="fig font-black text-accent-blue text-2xl leading-none mt-1">
+          {formatCurrency(stats.pendingAmount)}
+        </p>
+      </div>
+
+      {/* 其餘金額 */}
+      <div className="grid grid-cols-3 gap-3">
+        <StatCard label="總金額" value={stats.totalAmount} />
+        <StatCard label="已領取金額" value={stats.withdrawnAmount} />
+        <StatCard label="審核中金額" value={stats.lockedAmount} />
+      </div>
+
+      {/* 人數：次要對帳列 */}
+      <div className="rounded-card border border-hairline bg-surface flex divide-x divide-hairline">
+        <div className="flex-1 px-4 py-3 flex items-center justify-between gap-2">
+          <span className="eyebrow text-slate-500">我的推薦人數</span>
+          <span className="fig text-lg text-ink">
+            {stats.referralCount}
+            <span className="ml-1 text-sm font-medium text-slate-400">人</span>
+          </span>
+        </div>
+        <div className="flex-1 px-4 py-3 flex items-center justify-between gap-2">
+          <span className="eyebrow text-slate-500">我的網絡人數</span>
+          <span className="fig text-lg text-ink">
+            {stats.networkCount}
+            <span className="ml-1 text-sm font-medium text-slate-400">人</span>
+          </span>
+        </div>
+      </div>
     </div>
   );
 }
@@ -129,9 +127,9 @@ async function ReferralBlock() {
       title="我的推薦碼"
       subtitle="分享您的推薦碼，邀請朋友加入並獲得獎勵！"
     >
-      <div className="rounded-xl bg-brand-soft border border-brand/30 p-5 text-center">
-        <p className="text-sm text-brand-dark font-medium">推薦碼</p>
-        <p className="text-4xl font-black tracking-widest text-brand-dark mt-2">
+      <div className="rounded-card bg-brand-soft border border-brand/30 p-4 text-center">
+        <p className="eyebrow text-slate-500">推薦碼</p>
+        <p className="text-2xl font-black tracking-widest text-accent-blue mt-2 tabular-nums">
           {me.referralCode}
         </p>
       </div>
@@ -185,19 +183,17 @@ async function WithdrawalHistorySection() {
   if (list.length === 0) {
     return (
       <SectionCard title="我的提領申請">
-        <div className="py-8 text-center text-slate-500">
-          <p>目前沒有提領申請</p>
-        </div>
+        <EmptyState title="目前沒有提領申請" />
       </SectionCard>
     );
   }
   return (
     <SectionCard title="我的提領申請" subtitle="最近 10 筆">
-      <ul className="divide-y divide-slate-100">
+      <ul className="divide-y divide-hairline">
         {list.map((w) => (
           <li key={w.id} className="py-3 flex items-center justify-between gap-3">
             <div>
-              <p className="font-bold text-lg">{formatCurrency(w.amount)}</p>
+              <p className="fig text-lg">{formatCurrency(w.amount)}</p>
               <p className="text-xs text-slate-500">
                 {formatDateTime(w.createdAt)}
               </p>
@@ -211,15 +207,19 @@ async function WithdrawalHistorySection() {
 }
 
 function SkeletonBox({ h }: { h: string }) {
-  return <div className={`${h} rounded-2xl bg-slate-100 animate-pulse`} />;
+  return <Skeleton className={`${h} rounded-card`} />;
 }
 
 function StatsSkeleton() {
   return (
-    <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
-      {Array.from({ length: 6 }).map((_, i) => (
-        <div key={i} className="h-28 rounded-2xl bg-slate-100 animate-pulse" />
-      ))}
+    <div className="space-y-3">
+      <Skeleton className="h-20 rounded-card" />
+      <div className="grid grid-cols-3 gap-3">
+        {Array.from({ length: 3 }).map((_, i) => (
+          <Skeleton key={i} className="h-20 rounded-card" />
+        ))}
+      </div>
+      <Skeleton className="h-12 rounded-card" />
     </div>
   );
 }

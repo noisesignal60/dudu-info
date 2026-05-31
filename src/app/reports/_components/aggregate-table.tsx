@@ -1,79 +1,75 @@
 import type { LedgerAggregateRow } from "@/data/reports/ledger";
 import { formatCurrency, cn } from "@/lib/utils";
+import { EmptyState } from "@/ui/empty-state";
+import {
+  Table,
+  TableHeader,
+  TableBody,
+  TableFooter,
+  TableRow,
+  TableHead,
+  TableCell,
+} from "@/ui/table";
 
 export function AggregateTable({ rows }: { rows: LedgerAggregateRow[] }) {
   if (rows.length === 0) {
     return (
-      <div className="bg-white border border-slate-200 rounded-2xl py-16 text-center text-slate-500">
-        無資料
+      <div className="bg-surface border border-hairline rounded-card">
+        <EmptyState title="無資料" />
       </div>
     );
   }
 
   return (
-    <div className="bg-white border border-slate-200 rounded-2xl shadow-sm overflow-hidden">
-      <div className="overflow-x-auto">
-        <table className="w-full text-sm">
-          <thead className="bg-slate-50 text-slate-600">
-            <tr className="text-left">
-              <th className="px-3 py-3 text-xs font-bold uppercase">期間</th>
-              <th className="px-3 py-3 text-xs font-bold uppercase text-right">
-                收入
-              </th>
-              <th className="px-3 py-3 text-xs font-bold uppercase text-right">
-                支出
-              </th>
-              <th className="px-3 py-3 text-xs font-bold uppercase text-right">
-                淨額
-              </th>
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-slate-100">
-            {rows.map((r, i) => (
-              <tr
-                key={r.key}
+    <div className="rounded-card border border-hairline overflow-hidden">
+      <Table>
+        <TableHeader>
+          <TableRow>
+            <TableHead>期間</TableHead>
+            <TableHead className="text-right">收入</TableHead>
+            <TableHead className="text-right">支出</TableHead>
+            <TableHead className="text-right">淨額</TableHead>
+          </TableRow>
+        </TableHeader>
+        <TableBody>
+          {rows.map((r) => (
+            <TableRow key={r.key}>
+              <TableCell className="font-medium text-slate-900">
+                {r.label}
+              </TableCell>
+              <TableCell className="text-right font-bold text-positive tabular-nums">
+                {formatCurrency(r.income)}
+              </TableCell>
+              <TableCell className="text-right font-bold text-money tabular-nums">
+                {formatCurrency(r.expense)}
+              </TableCell>
+              <TableCell
                 className={cn(
-                  "hover:bg-slate-50",
-                  i % 2 === 1 && "bg-slate-50/50",
+                  "text-right font-black tabular-nums",
+                  r.net >= 0 ? "text-positive" : "text-money",
                 )}
               >
-                <td className="px-3 py-3 font-medium text-slate-900">
-                  {r.label}
-                </td>
-                <td className="px-3 py-3 text-right font-bold text-positive tabular-nums">
-                  {formatCurrency(r.income)}
-                </td>
-                <td className="px-3 py-3 text-right font-bold text-money tabular-nums">
-                  {formatCurrency(r.expense)}
-                </td>
-                <td
-                  className={cn(
-                    "px-3 py-3 text-right font-black tabular-nums",
-                    r.net >= 0 ? "text-positive" : "text-money",
-                  )}
-                >
-                  {r.net >= 0 ? "" : "-"}
-                  {formatCurrency(Math.abs(r.net))}
-                </td>
-              </tr>
-            ))}
-          </tbody>
-          <tfoot>
-            <tr className="bg-slate-100 font-bold">
-              <td className="px-3 py-3 text-slate-900">合計</td>
-              <td className="px-3 py-3 text-right text-positive tabular-nums">
-                {formatCurrency(rows.reduce((s, r) => s + r.income, 0))}
-              </td>
-              <td className="px-3 py-3 text-right text-money tabular-nums">
-                {formatCurrency(rows.reduce((s, r) => s + r.expense, 0))}
-              </td>
-              <td className="px-3 py-3 text-right tabular-nums">
-                {formatCurrency(rows.reduce((s, r) => s + r.net, 0))}
-              </td>
-            </tr>
-          </tfoot>
-        </table>
-      </div>
+                {r.net >= 0 ? "" : "-"}
+                {formatCurrency(Math.abs(r.net))}
+              </TableCell>
+            </TableRow>
+          ))}
+        </TableBody>
+        <TableFooter>
+          <TableRow>
+            <TableCell className="font-bold text-slate-900">合計</TableCell>
+            <TableCell className="text-right font-bold text-positive tabular-nums">
+              {formatCurrency(rows.reduce((s, r) => s + r.income, 0))}
+            </TableCell>
+            <TableCell className="text-right font-bold text-money tabular-nums">
+              {formatCurrency(rows.reduce((s, r) => s + r.expense, 0))}
+            </TableCell>
+            <TableCell className="text-right font-bold tabular-nums">
+              {formatCurrency(rows.reduce((s, r) => s + r.net, 0))}
+            </TableCell>
+          </TableRow>
+        </TableFooter>
+      </Table>
     </div>
   );
 }

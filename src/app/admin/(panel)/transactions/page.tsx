@@ -6,6 +6,18 @@ import {
 } from "@/data/admin/transactions";
 import { formatCurrency, formatDateTime, cn } from "@/lib/utils";
 import { TxToolbar, EditTxButton } from "./tx-modals";
+import { Button } from "@/ui/button";
+import { Badge } from "@/ui/badge";
+import {
+  Table,
+  TableHeader,
+  TableBody,
+  TableRow,
+  TableHead,
+  TableCell,
+} from "@/ui/table";
+import { EmptyState } from "@/ui/empty-state";
+import { Skeleton } from "@/ui/skeleton";
 
 export const metadata = { title: "交易管理 ｜ 後台" };
 
@@ -17,11 +29,13 @@ type SearchParams = Promise<{
   page?: string;
 }>;
 
-const KIND_LABELS: Record<TxKind, { label: string; cls: string }> = {
-  commission: { label: "分潤", cls: "bg-blue-100 text-blue-700" },
-  reward: { label: "獎勵", cls: "bg-purple-100 text-purple-700" },
-  withdrawal: { label: "提領", cls: "bg-amber-100 text-amber-700" },
-  adjust: { label: "調整", cls: "bg-slate-200 text-slate-700" },
+type KindVariant = "commission" | "reward" | "withdrawal" | "adjust";
+
+const KIND_LABELS: Record<TxKind, { label: string; variant: KindVariant }> = {
+  commission: { label: "分潤", variant: "commission" },
+  reward: { label: "獎勵", variant: "reward" },
+  withdrawal: { label: "提領", variant: "withdrawal" },
+  adjust: { label: "調整", variant: "adjust" },
 };
 
 export default function AdminTransactionsPage({
@@ -30,10 +44,10 @@ export default function AdminTransactionsPage({
   searchParams: SearchParams;
 }) {
   return (
-    <div className="space-y-5">
+    <div className="space-y-6">
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
-          <h1 className="text-2xl font-black text-slate-900">交易管理</h1>
+          <h1 className="font-serif text-2xl font-black text-ink">交易管理</h1>
           <p className="text-slate-500 mt-1 text-sm">
             分潤、提領、新帳號獎勵與手動調整紀錄
           </p>
@@ -43,7 +57,7 @@ export default function AdminTransactionsPage({
         </Suspense>
       </div>
 
-      <Suspense fallback={<div className="h-14 bg-slate-200 rounded-2xl animate-pulse" />}>
+      <Suspense fallback={<Skeleton className="h-14 rounded-card" />}>
         <FilterBar searchParams={searchParams} />
       </Suspense>
 
@@ -82,8 +96,12 @@ async function FilterBar({ searchParams }: { searchParams: SearchParams }) {
   );
   const activeKind = sp.kind ?? "all";
 
+  const dateClass =
+    "rounded-xl border border-input bg-surface min-h-10 px-3 text-sm text-ink " +
+    "outline-none transition-[color,box-shadow] focus-visible:border-brand focus-visible:ring-4 focus-visible:ring-ring/25";
+
   return (
-    <form className="bg-white rounded-2xl border border-slate-200 p-4 flex flex-wrap items-end gap-3">
+    <form className="bg-surface rounded-card border border-hairline shadow-premium-sm p-4 flex flex-wrap items-end gap-3">
       <input type="hidden" name="member" value={sp.member ?? ""} />
       <div>
         <label className="block text-xs font-medium text-slate-500 mb-1">
@@ -91,18 +109,16 @@ async function FilterBar({ searchParams }: { searchParams: SearchParams }) {
         </label>
         <div className="inline-flex gap-1">
           {kinds.map(({ k, label }) => (
-            <Link
+            <Button
               key={k}
-              href={buildHref({ ...sp, kind: k, page: undefined })}
-              className={cn(
-                "px-3 py-2 rounded-xl text-sm font-medium",
-                activeKind === k
-                  ? "bg-brand text-white"
-                  : "bg-slate-100 text-slate-700 hover:bg-slate-200",
-              )}
+              asChild
+              size="sm"
+              variant={activeKind === k ? "primary" : "secondary"}
             >
-              {label}
-            </Link>
+              <Link href={buildHref({ ...sp, kind: k, page: undefined })}>
+                {label}
+              </Link>
+            </Button>
           ))}
         </div>
       </div>
@@ -114,7 +130,7 @@ async function FilterBar({ searchParams }: { searchParams: SearchParams }) {
           type="date"
           name="from"
           defaultValue={sp.from ?? ""}
-          className="input-base !min-h-10 !text-sm"
+          className={dateClass}
         />
       </div>
       <div>
@@ -125,19 +141,20 @@ async function FilterBar({ searchParams }: { searchParams: SearchParams }) {
           type="date"
           name="to"
           defaultValue={sp.to ?? ""}
-          className="input-base !min-h-10 !text-sm"
+          className={dateClass}
         />
       </div>
-      <button type="submit" className="btn-primary !min-h-10 !text-sm">
+      <Button type="submit" size="sm">
         套用
-      </button>
+      </Button>
       {(sp.from || sp.to || sp.member) && (
-        <Link
-          href={`/admin/transactions${sp.kind && sp.kind !== "all" ? `?kind=${sp.kind}` : ""}`}
-          className="btn-secondary !min-h-10 !text-sm"
-        >
-          清除
-        </Link>
+        <Button asChild variant="secondary" size="sm">
+          <Link
+            href={`/admin/transactions${sp.kind && sp.kind !== "all" ? `?kind=${sp.kind}` : ""}`}
+          >
+            清除
+          </Link>
+        </Button>
       )}
       {sp.member && (
         <div className="text-xs text-slate-500 ml-auto">
@@ -175,127 +192,83 @@ async function Listing({ searchParams }: { searchParams: SearchParams }) {
 
   if (rows.length === 0) {
     return (
-      <div className="bg-white rounded-2xl border border-slate-200 py-16 text-center text-slate-500">
-        沒有符合條件的交易
+      <div className="rounded-card border border-hairline overflow-hidden">
+        <EmptyState title="沒有符合條件的交易" />
       </div>
     );
   }
 
   return (
-    <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
-      <div className="px-5 py-3 border-b border-slate-100 text-sm text-slate-600 flex justify-between">
-        <span>
-          共 <span className="font-bold text-slate-900">{total}</span> 筆 ・
-          本頁 {rows.length}/{pageSize}
-        </span>
+    <div className="space-y-3">
+      <div className="text-sm text-slate-600">
+        共 <span className="font-bold text-ink">{total}</span> 筆 ・
+        本頁 {rows.length}/{pageSize}
       </div>
-      <div className="overflow-x-auto">
-        <table className="w-full text-sm">
-          <thead className="bg-slate-50 text-slate-600">
-            <tr className="text-left">
-              <Th>時間</Th>
-              <Th>類型</Th>
-              <Th>主要對象</Th>
-              <Th>交易名目</Th>
-              <Th align="right">金額</Th>
-              <Th>描述</Th>
-              <Th align="right">操作</Th>
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-slate-100">
+      <div className="rounded-card border border-hairline overflow-hidden">
+        <Table>
+          <TableHeader>
+            <TableRow>
+              <TableHead>時間</TableHead>
+              <TableHead>類型</TableHead>
+              <TableHead>主要對象</TableHead>
+              <TableHead>交易名目</TableHead>
+              <TableHead className="text-right">金額</TableHead>
+              <TableHead>描述</TableHead>
+              <TableHead className="text-right">操作</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
             {rows.map((t) => {
               const k = KIND_LABELS[t.kind];
               return (
-                <tr key={t.id} className="hover:bg-slate-50">
-                  <Td className="text-xs text-slate-500 whitespace-nowrap">
+                <TableRow key={t.id}>
+                  <TableCell className="text-xs text-slate-500 whitespace-nowrap">
                     {formatDateTime(t.createdAt)}
-                  </Td>
-                  <Td>
-                    <span
-                      className={cn(
-                        "inline-flex items-center px-2 py-0.5 rounded-full text-xs font-bold",
-                        k.cls,
-                      )}
-                    >
+                  </TableCell>
+                  <TableCell>
+                    <Badge variant={k.variant} size="sm">
                       {k.label}
-                    </span>
-                  </Td>
-                  <Td>
+                    </Badge>
+                  </TableCell>
+                  <TableCell>
                     <Link
                       href={`/admin/members/${t.memberId}`}
-                      className="font-medium text-slate-900 hover:text-brand-dark"
+                      className="font-medium text-ink hover:text-brand-dark"
                     >
                       {t.memberName ?? t.memberLineDisplay ?? "—"}
                     </Link>
-                  </Td>
-                  <Td>{t.title}</Td>
-                  <Td
-                    align="right"
+                  </TableCell>
+                  <TableCell>{t.title}</TableCell>
+                  <TableCell
                     className={cn(
-                      "font-bold tabular-nums",
+                      "text-right font-bold tabular-nums",
                       t.amount >= 0 ? "text-positive" : "text-money",
                     )}
                   >
                     {t.amount >= 0 ? "+" : ""}
                     {formatCurrency(t.amount)}
-                  </Td>
-                  <Td className="max-w-[240px] truncate text-slate-600">
+                  </TableCell>
+                  <TableCell className="max-w-[240px] truncate text-slate-600">
                     {t.description ?? "—"}
-                  </Td>
-                  <Td align="right">
+                  </TableCell>
+                  <TableCell className="text-right">
                     <EditTxButton tx={t} />
-                  </Td>
-                </tr>
+                  </TableCell>
+                </TableRow>
               );
             })}
-          </tbody>
-        </table>
+          </TableBody>
+        </Table>
       </div>
     </div>
   );
 }
 
-function Th({
-  children,
-  align = "left",
-}: {
-  children: React.ReactNode;
-  align?: "left" | "right";
-}) {
-  return (
-    <th
-      className={`px-3 py-3 text-xs font-bold uppercase whitespace-nowrap ${
-        align === "right" ? "text-right" : "text-left"
-      }`}
-    >
-      {children}
-    </th>
-  );
-}
-
-function Td({
-  children,
-  className = "",
-  align = "left",
-}: {
-  children: React.ReactNode;
-  className?: string;
-  align?: "left" | "right";
-}) {
-  return (
-    <td
-      className={`px-3 py-3 ${align === "right" ? "text-right" : "text-left"} ${className}`}
-    >
-      {children}
-    </td>
-  );
-}
-
 function TableSkeleton() {
   return (
-    <div className="bg-white rounded-2xl border border-slate-200 p-8 space-y-3">
+    <div className="bg-surface rounded-card border border-hairline shadow-premium-sm p-8 space-y-3">
       {Array.from({ length: 6 }).map((_, i) => (
-        <div key={i} className="h-10 bg-slate-100 rounded animate-pulse" />
+        <Skeleton key={i} className="h-10 rounded" />
       ))}
     </div>
   );

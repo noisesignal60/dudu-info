@@ -1,9 +1,10 @@
 "use client";
 
 import { useEffect, useId, useRef, useState, useTransition } from "react";
-import { Search } from "lucide-react";
 import { searchMembersAction } from "@/actions/admin-transactions";
 import type { MemberOption } from "@/data/admin/transactions";
+import { Input } from "@/ui/input";
+import { Label } from "@/ui/label";
 
 export function MemberCombobox({
   name,
@@ -48,19 +49,17 @@ export function MemberCombobox({
 
   return (
     <div className="block" ref={boxRef}>
-      <label htmlFor={id} className="block text-sm font-medium text-slate-700 mb-1">
+      <Label htmlFor={id} className="mb-1">
         {label}
         {required && " *"}
-      </label>
+      </Label>
       <input type="hidden" name={name} value={selected?.id ?? ""} />
       <div className="relative">
-        <div className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400">
-          <Search className="w-4 h-4" />
-        </div>
-        <input
+        <Input
           id={id}
           type="text"
           autoComplete="off"
+          inputSize="sm"
           value={selected ? selected.label : q}
           onChange={(e) => {
             if (selected) setSelected(null);
@@ -69,11 +68,10 @@ export function MemberCombobox({
           }}
           onFocus={() => setOpen(true)}
           placeholder="搜尋姓名 / LINE 顯示名 / 推薦碼 / 電話"
-          className="input-base pl-9"
         />
       </div>
       {open && (
-        <ul className="mt-1 border border-slate-200 bg-white rounded-xl shadow-lg max-h-72 overflow-y-auto z-20 relative">
+        <ul className="mt-1 border border-hairline bg-surface rounded-xl shadow-premium max-h-72 overflow-y-auto z-20 relative">
           {pending && (
             <li className="px-3 py-2 text-sm text-slate-500">搜尋中…</li>
           )}
@@ -89,7 +87,7 @@ export function MemberCombobox({
                   setOpen(false);
                   setQ("");
                 }}
-                className="w-full text-left px-3 py-2 hover:bg-slate-100 text-sm"
+                className="w-full text-left px-3 py-2 hover:bg-secondary text-sm"
               >
                 {o.label}
               </button>

@@ -1,29 +1,42 @@
 "use client";
 
-import { useActionState } from "react";
+import { useActionState, useEffect, useState } from "react";
+import { toast } from "sonner";
 import {
   updateMemberBasicAction,
   type AdminMemberFormState,
 } from "@/actions/admin-members";
 import type { AdminMemberRow } from "@/data/admin/members";
+import { Button } from "@/ui/button";
+import { Input } from "@/ui/input";
+import { Label } from "@/ui/label";
+import { Alert } from "@/ui/alert";
 
 const initial: AdminMemberFormState = { ok: false };
 
 export function MemberBasicForm({ member }: { member: AdminMemberRow }) {
   const action = updateMemberBasicAction.bind(null, member.id);
   const [state, formAction, pending] = useActionState(action, initial);
+  const [acked, setAcked] = useState(false);
 
   function err(k: string) {
     return state.ok === false ? state.fieldErrors?.[k] : undefined;
   }
 
+  if (state.ok && !acked) {
+    setAcked(true);
+  } else if (!state.ok && acked) {
+    setAcked(false);
+  }
+
+  useEffect(() => {
+    if (state.ok) toast.success(state.message ?? "已更新");
+  }, [state]);
+
   return (
     <form action={formAction} className="space-y-3">
-      {state.ok === true && (
-        <Banner tone="ok">{state.message}</Banner>
-      )}
       {state.ok === false && state.error && (
-        <Banner tone="err">{state.error}</Banner>
+        <Alert variant="danger">{state.error}</Alert>
       )}
 
       <Row>
@@ -40,9 +53,9 @@ export function MemberBasicForm({ member }: { member: AdminMemberRow }) {
       </Row>
 
       <div className="pt-2">
-        <button type="submit" className="btn-primary !min-h-11 !text-base" disabled={pending}>
+        <Button type="submit" size="sm" disabled={pending}>
           {pending ? "儲存中…" : "儲存基本資料"}
-        </button>
+        </Button>
       </div>
     </form>
   );
@@ -64,36 +77,16 @@ function Field({
   err?: string;
 }) {
   return (
-    <div>
-      <label className="block mb-1.5 text-sm font-semibold text-slate-700">
-        {label}
-      </label>
-      <input
+    <div className="space-y-2">
+      <Label htmlFor={name}>{label}</Label>
+      <Input
+        id={name}
         name={name}
         defaultValue={defaultValue}
-        className="input-base !min-h-10 !text-sm"
+        inputSize="sm"
+        aria-invalid={!!err}
       />
-      {err && <p className="mt-1 text-xs text-money">{err}</p>}
-    </div>
-  );
-}
-
-function Banner({
-  tone,
-  children,
-}: {
-  tone: "ok" | "err";
-  children: React.ReactNode;
-}) {
-  return (
-    <div
-      className={`rounded-xl p-3 text-sm ${
-        tone === "ok"
-          ? "bg-brand-soft text-brand-dark border border-brand/30"
-          : "bg-red-50 text-red-700 border border-red-200"
-      }`}
-    >
-      {children}
+      {err && <p className="text-sm text-money font-medium">{err}</p>}
     </div>
   );
 }

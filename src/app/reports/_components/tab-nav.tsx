@@ -16,7 +16,7 @@ const TABS = [
 export function ReportsTabNav() {
   const pathname = usePathname();
   return (
-    <nav className="flex gap-1 overflow-x-auto -mx-1 px-1">
+    <nav className="flex gap-1 overflow-x-auto -mx-1 px-1 border-b border-hairline">
       {TABS.map((t) => {
         const active =
           t.href === "/reports"
@@ -27,10 +27,10 @@ export function ReportsTabNav() {
             key={t.href}
             href={t.href}
             className={cn(
-              "px-4 py-2 rounded-t-xl font-medium whitespace-nowrap text-sm",
+              "px-4 py-2.5 -mb-px border-b-2 border-transparent whitespace-nowrap text-sm transition-colors",
               active
-                ? "bg-slate-100 text-slate-900 border-b-2 border-brand"
-                : "text-slate-600 hover:text-slate-900 hover:bg-slate-50",
+                ? "border-accent-blue text-accent-blue font-semibold"
+                : "text-slate-500 font-medium hover:text-ink",
             )}
           >
             {t.label}

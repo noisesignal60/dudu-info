@@ -1,20 +1,17 @@
 import { cn, formatCurrency } from "@/lib/utils";
-import type { ReactNode } from "react";
 
-type Variant = "default" | "highlight";
+type Variant = "default" | "highlight" | "accent";
 
 export function StatCard({
   label,
   value,
   unit,
-  icon,
   variant = "default",
   isMoney = true,
 }: {
   label: string;
   value: number;
   unit?: string;
-  icon?: ReactNode;
   variant?: Variant;
   isMoney?: boolean;
 }) {
@@ -23,35 +20,29 @@ export function StatCard({
   return (
     <div
       className={cn(
-        "rounded-2xl p-5 shadow-sm border",
+        "rounded-card p-4 border",
+        // accent 不填色（克制）：僅關鍵數字轉深藍；highlight 維持石板灰填色。
         variant === "highlight"
           ? "bg-brand text-white border-brand"
-          : "bg-white border-slate-200",
+          : "bg-surface border-hairline",
       )}
     >
-      <div className="flex items-center justify-between">
-        <span
-          className={cn(
-            "text-base font-medium",
-            variant === "highlight" ? "text-white/90" : "text-slate-600",
-          )}
-        >
-          {label}
-        </span>
-        {icon && (
-          <span
-            className={cn(
-              variant === "highlight" ? "text-white/80" : "text-brand",
-            )}
-          >
-            {icon}
-          </span>
+      <span
+        className={cn(
+          "eyebrow block",
+          variant === "highlight" ? "text-white/80" : "text-slate-500",
         )}
-      </div>
+      >
+        {label}
+      </span>
       <div
         className={cn(
-          "mt-3 font-black tracking-tight",
-          variant === "highlight" ? "text-4xl" : "text-3xl",
+          "fig font-black mt-1.5 leading-none",
+          variant === "highlight"
+            ? "text-2xl text-white"
+            : variant === "accent"
+              ? "text-xl text-accent-blue"
+              : "text-xl text-ink",
         )}
       >
         {display}

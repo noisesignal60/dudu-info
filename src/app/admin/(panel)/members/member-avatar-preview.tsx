@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { UserCircle2, X } from "lucide-react";
+import { Dialog, DialogContent, DialogTitle } from "@/ui/dialog";
 // eslint-disable-next-line @next/next/no-img-element
 const Img = (props: React.ImgHTMLAttributes<HTMLImageElement>) => <img {...props} alt={props.alt ?? ""} />;
 
@@ -14,11 +14,7 @@ export function MemberAvatarPreview({
 }) {
   const [open, setOpen] = useState(false);
   if (!src) {
-    return (
-      <div className="w-10 h-10 rounded-full bg-slate-200 grid place-items-center">
-        <UserCircle2 className="w-6 h-6 text-slate-400" />
-      </div>
-    );
+    return <div className="w-10 h-10 rounded-full bg-slate-200" />;
   }
   return (
     <>
@@ -36,27 +32,16 @@ export function MemberAvatarPreview({
           className="w-10 h-10 rounded-full object-cover bg-slate-200"
         />
       </button>
-      {open && (
-        <div
-          className="fixed inset-0 z-50 bg-black/70 grid place-items-center p-6"
-          onClick={() => setOpen(false)}
-        >
-          <button
-            type="button"
-            onClick={() => setOpen(false)}
-            className="absolute top-4 right-4 p-2 bg-white rounded-full shadow"
-            aria-label="關閉"
-          >
-            <X className="w-5 h-5" />
-          </button>
+      <Dialog open={open} onOpenChange={setOpen}>
+        <DialogContent className="max-w-fit border-0 bg-transparent p-0 shadow-none">
+          <DialogTitle className="sr-only">{alt}</DialogTitle>
           <Img
             src={src}
             alt={alt}
-            className="max-w-[90vw] max-h-[80vh] rounded-2xl shadow-2xl object-contain"
-            onClick={(e) => e.stopPropagation()}
+            className="max-w-[90vw] max-h-[80vh] rounded-card shadow-premium object-contain"
           />
-        </div>
-      )}
+        </DialogContent>
+      </Dialog>
     </>
   );
 }

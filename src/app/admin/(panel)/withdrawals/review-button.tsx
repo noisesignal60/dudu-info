@@ -1,7 +1,7 @@
 "use client";
 
-import { useState, useActionState } from "react";
-import { CheckCircle2, XCircle, Eye } from "lucide-react";
+import { useState, useActionState, useEffect } from "react";
+import { toast } from "sonner";
 import {
   approveWithdrawalAction,
   rejectWithdrawalAction,
@@ -9,6 +9,15 @@ import {
 } from "@/actions/admin-withdrawals";
 import type { AdminWithdrawalRow } from "@/data/admin/withdrawals";
 import { formatCurrency, formatDateTime } from "@/lib/utils";
+import { Button } from "@/ui/button";
+import { Textarea } from "@/ui/textarea";
+import { Alert } from "@/ui/alert";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/ui/dialog";
 
 const initial: WithdrawalDecisionState = { ok: false };
 
@@ -24,30 +33,20 @@ export function ReviewButton({
 
   return (
     <>
-      <button
-        type="button"
+      <Button
+        variant="ghost"
+        size="sm"
         onClick={() => setOpen(true)}
-        className="inline-flex items-center gap-1 text-brand-dark hover:text-brand font-semibold"
+        className="text-brand-dark hover:text-brand"
       >
-        {isPending ? (
-          <>
-            <CheckCircle2 className="w-4 h-4" />
-            審核
-          </>
-        ) : (
-          <>
-            <Eye className="w-4 h-4" />
-            檢視
-          </>
-        )}
-      </button>
-      {open && (
-        <ReviewModal
-          withdrawal={withdrawal}
-          passbookUrl={passbookUrl}
-          onClose={() => setOpen(false)}
-        />
-      )}
+        {isPending ? "審核" : "檢視"}
+      </Button>
+      <ReviewModal
+        withdrawal={withdrawal}
+        passbookUrl={passbookUrl}
+        open={open}
+        setOpen={setOpen}
+      />
     </>
   );
 }
@@ -55,11 +54,13 @@ export function ReviewButton({
 function ReviewModal({
   withdrawal,
   passbookUrl,
-  onClose,
+  open,
+  setOpen,
 }: {
   withdrawal: AdminWithdrawalRow;
   passbookUrl: string | null;
-  onClose: () => void;
+  open: boolean;
+  setOpen: (v: boolean) => void;
 }) {
   const isPending = withdrawal.status === "pending";
 
@@ -73,29 +74,26 @@ function ReviewModal({
   );
 
   const submitted = approveState.ok || rejectState.ok;
-  if (submitted) setTimeout(onClose, 800);
+  const [acked, setAcked] = useState(false);
+  if (submitted && !acked) {
+    setAcked(true);
+    setOpen(false);
+  } else if (!submitted && acked) {
+    setAcked(false);
+  }
+  useEffect(() => {
+    if (approveState.ok) toast.success(approveState.message ?? "已通過");
+    else if (rejectState.ok) toast.success(rejectState.message ?? "已拒絕");
+  }, [approveState, rejectState]);
 
   return (
-    <div
-      className="fixed inset-0 z-50 bg-black/60 grid place-items-center p-4 overflow-y-auto"
-      onClick={onClose}
-    >
-      <div
-        className="bg-white rounded-2xl shadow-xl w-full max-w-3xl my-8"
-        onClick={(e) => e.stopPropagation()}
-      >
-        <header className="px-6 py-4 border-b border-slate-100 flex items-center justify-between">
-          <h3 className="text-lg font-bold text-slate-900">
+    <Dialog open={open} onOpenChange={setOpen}>
+      <DialogContent className="max-w-3xl p-0">
+        <DialogHeader className="px-6 py-4 border-b border-hairline">
+          <DialogTitle>
             {isPending ? "審核提領申請" : "提領申請詳情"}
-          </h3>
-          <button
-            type="button"
-            onClick={onClose}
-            className="text-slate-500 hover:text-slate-900"
-          >
-            ✕
-          </button>
-        </header>
+          </DialogTitle>
+        </DialogHeader>
 
         <div className="p-6 grid md:grid-cols-2 gap-6">
           {/* 申請資訊 */}
@@ -104,7 +102,7 @@ function ReviewModal({
               {withdrawal.memberName ?? withdrawal.memberLineDisplay ?? "—"}
             </Row>
             <Row label="提領金額">
-              <span className="text-2xl font-black text-money">
+              <span className="text-2xl font-black text-money tabular-nums">
                 {formatCurrency(withdrawal.amount)}
               </span>
             </Row>
@@ -134,7 +132,7 @@ function ReviewModal({
                 href={passbookUrl}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="block border border-slate-200 rounded-xl overflow-hidden"
+                className="block border border-hairline rounded-xl overflow-hidden"
                 title="點擊在新分頁開啟並放大"
               >
                 {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -149,60 +147,50 @@ function ReviewModal({
         </div>
 
         {isPending && (
-          <footer className="px-6 py-5 border-t border-slate-100 bg-slate-50 rounded-b-2xl space-y-3">
+          <footer className="px-6 py-5 border-t border-hairline bg-background rounded-b-card space-y-3">
             <div className="grid grid-cols-2 gap-3">
               <form action={rejectAction} className="space-y-2">
-                <textarea
+                <Textarea
                   name="adminNote"
                   rows={2}
-                  className="input-base py-2"
                   placeholder="拒絕理由（建議填寫）"
                 />
-                <button
+                <Button
                   type="submit"
+                  variant="danger"
+                  size="sm"
+                  className="w-full"
                   disabled={rejectLoading || approveLoading}
-                  className="btn-danger w-full !min-h-12"
                 >
-                  <XCircle className="w-5 h-5" />
                   {rejectLoading ? "處理中..." : "拒絕"}
-                </button>
+                </Button>
                 {!rejectState.ok && rejectState.error && (
-                  <p className="text-sm text-red-600">{rejectState.error}</p>
+                  <Alert variant="danger">{rejectState.error}</Alert>
                 )}
               </form>
               <form action={approveAction} className="space-y-2">
-                <textarea
+                <Textarea
                   name="adminNote"
                   rows={2}
-                  className="input-base py-2"
                   placeholder="撥款備註（選填）"
                 />
-                <button
+                <Button
                   type="submit"
+                  size="sm"
+                  className="w-full"
                   disabled={approveLoading || rejectLoading}
-                  className="btn-primary w-full !min-h-12"
                 >
-                  <CheckCircle2 className="w-5 h-5" />
                   {approveLoading ? "處理中..." : "通過"}
-                </button>
+                </Button>
                 {!approveState.ok && approveState.error && (
-                  <p className="text-sm text-red-600">{approveState.error}</p>
+                  <Alert variant="danger">{approveState.error}</Alert>
                 )}
               </form>
             </div>
-            {(approveState.ok || rejectState.ok) && (
-              <p className="text-sm text-green-700 font-medium text-center">
-                {approveState.ok
-                  ? approveState.message
-                  : rejectState.ok
-                    ? rejectState.message
-                    : ""}
-              </p>
-            )}
           </footer>
         )}
-      </div>
-    </div>
+      </DialogContent>
+    </Dialog>
   );
 }
 
@@ -216,7 +204,7 @@ function Row({
   return (
     <div className="grid grid-cols-3 gap-2 items-baseline">
       <p className="text-sm text-slate-500">{label}</p>
-      <div className="col-span-2 text-slate-900 font-medium break-words">
+      <div className="col-span-2 text-ink font-medium break-words">
         {children}
       </div>
     </div>

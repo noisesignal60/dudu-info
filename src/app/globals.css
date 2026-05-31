@@ -1,93 +1,120 @@
 @import "tailwindcss";
+@import "tw-animate-css";
 
 @theme {
-  --color-brand: #06C755;          /* LINE Green，品牌主色 */
-  --color-brand-dark: #04a045;
-  --color-brand-soft: #E8F8EE;
+  /* ===== 品牌／語意 token（日式商業：深藍黑主色） ===== */
+  --color-brand: #1E293B;          /* slate-800 深藍黑：品牌主色 */
+  --color-brand-dark: #0F172A;     /* slate-900：hover／深色 */
+  --color-brand-soft: #E2E8F0;     /* slate-200：淺色填充背板 */
   --color-money: #DC2626;
   --color-positive: #16A34A;
   --color-negative: #DC2626;
 
+  /* ===== 招牌強調色：深藍（精緻金融感）。克制使用：連結／關鍵數字／active／focus ring ===== */
+  --color-accent-blue: #1E40AF;        /* blue-800：與 slate 同色相家族，白底對比 ~8.3:1（AAA） */
+  --color-accent-blue-dark: #1E3A8A;   /* blue-900：hover／pressed */
+  --color-accent-blue-soft: #EFF3FD;   /* 淺藍襯底：active pill／背板 */
+
+  /* 純色極簡：底為 Slate-50、面為純白、文字 Slate-900 */
+  --color-canvas: #F8FAFC;         /* slate-50：頁面底色 */
+  --color-surface: #FFFFFF;        /* 卡片面 */
+  --color-ink: #0F172A;            /* slate-900：主文字 */
+  --color-hairline: rgb(15 23 42 / 0.10);  /* 髮絲邊框：日式細線分區（略可見） */
+
+  /* 混合陰影策略：區塊扁平（premium-sm 近乎無），僅浮層用 premium */
+  --shadow-premium-sm: 0 1px 2px rgb(15 23 42 / 0.04);
+  --shadow-premium: 0 1px 2px rgb(15 23 42 / 0.04), 0 4px 12px rgb(15 23 42 / 0.05), 0 14px 30px rgb(15 23 42 / 0.04);
+
+  /* 方正俐落（日式商業）：卡片小圓角 */
+  --radius-card: 0.375rem;          /* 6px */
+
   --font-sans: var(--font-noto-tc), system-ui, -apple-system, sans-serif;
+  /* 明體已移除，標題改回原本黑體；font-serif utility 別名為 sans，故無需逐檔改 class */
+  --font-serif: var(--font-noto-tc), system-ui, -apple-system, sans-serif;
 }
 
-/* 計程車司機族群：放大基礎字體 */
+/* ===== shadcn/ui 語意 token（只做亮色）。直接複用上方既有色。 ===== */
+:root {
+  --radius: 0.25rem;                          /* 4px：方正元件 */
+  --background: var(--color-canvas);
+  --foreground: var(--color-ink);
+  --card: var(--color-surface);
+  --card-foreground: var(--color-ink);
+  --popover: var(--color-surface);
+  --popover-foreground: var(--color-ink);
+  --primary: var(--color-brand);              /* 深藍黑即 primary */
+  --primary-foreground: #ffffff;
+  --secondary: #f1f5f9;                        /* slate-100 */
+  --secondary-foreground: var(--color-ink);
+  --muted: #f1f5f9;
+  --muted-foreground: #64748b;                 /* slate-500 */
+  --accent: var(--color-brand-soft);           /* #E2E8F0 */
+  --accent-foreground: var(--color-brand-dark);
+  --destructive: var(--color-money);           /* danger 復用 money 值；語意仍分開 */
+  --destructive-foreground: #ffffff;
+  --border: var(--color-hairline);
+  --input: #cbd5e1;                            /* 輸入框邊框 slate-300 */
+  --ring: var(--color-accent-blue);            /* focus ring 用招牌深藍（原為 brand 深藍黑） */
+}
+
+/* 把語意值曝光成 utility（bg-background / text-primary / border-border / ring …）
+   並重新定義圓角 scale → 全站 rounded-lg/xl/2xl/card 一次變方正（日式）。 */
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-destructive-foreground: var(--destructive-foreground);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+
+  --radius-sm: 0.125rem;   /* 2px */
+  --radius-md: 0.1875rem;  /* 3px */
+  --radius-lg: 0.25rem;    /* 4px（原 0.5rem） */
+  --radius-xl: 0.25rem;    /* 4px（原 0.75rem） */
+  --radius-2xl: 0.375rem;  /* 6px（原 1rem） */
+}
+
+/* 未明確指定顏色的邊框，統一取髮絲色 */
+@layer base {
+  * {
+    @apply border-border;
+  }
+}
+
+/* 排版葉節點 utility（其餘維持元件導向，呼應已移除的 .btn-*／.input-base 慣例）。
+   .eyebrow：標題／數字上方的小型分類標籤；.fig：金額／數字基礎處理（顏色、尺寸用 Tailwind 疊加）。 */
+@layer components {
+  .eyebrow {
+    @apply text-xs font-medium uppercase tracking-[0.08em] text-slate-400;
+  }
+  .fig {
+    @apply tabular-nums tracking-tight font-bold;
+  }
+}
+
+/* 計程車司機族群：全站固定大字級（已移除 A/A+/A++ 切換） */
 html {
-  font-size: 17px;
-}
-@media (min-width: 768px) {
-  html { font-size: 16px; }
+  font-size: 34px;
 }
 
-/* 大字模式 */
-html[data-font-scale="large"] { font-size: 19px; }
-html[data-font-scale="xlarge"] { font-size: 21px; }
-
-body { font-family: var(--font-sans); }
-
-/* 主要按鈕：高度 ≥48px、好按、明確回饋 */
-.btn-primary {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  gap: .5rem;
-  min-height: 3rem;
-  padding: 0 1.5rem;
-  border-radius: .75rem;
-  background-color: var(--color-brand);
-  color: #fff;
-  font-weight: 700;
-  font-size: 1.125rem;
-  transition: background-color .15s, transform .1s;
+body {
+  font-family: var(--font-sans);
+  background-color: var(--color-canvas);
+  color: var(--color-ink);
 }
-.btn-primary:hover { background-color: var(--color-brand-dark); }
-.btn-primary:active { transform: scale(.98); }
-.btn-primary:disabled { opacity: .5; cursor: not-allowed; }
 
-.btn-secondary {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  gap: .5rem;
-  min-height: 3rem;
-  padding: 0 1.5rem;
-  border-radius: .75rem;
-  background-color: #fff;
-  color: #0f172a;
-  border: 1px solid #cbd5e1;
-  font-weight: 600;
-  font-size: 1.125rem;
-}
-.btn-secondary:hover { background-color: #f8fafc; }
-
-.btn-danger {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  gap: .5rem;
-  min-height: 3rem;
-  padding: 0 1.5rem;
-  border-radius: .75rem;
-  background-color: #dc2626;
-  color: #fff;
-  font-weight: 700;
-  font-size: 1.125rem;
-}
-.btn-danger:hover { background-color: #b91c1c; }
-
-.input-base {
-  display: block;
-  width: 100%;
-  min-height: 3rem;
-  padding: 0 1rem;
-  border-radius: .75rem;
-  border: 1px solid #cbd5e1;
-  font-size: 1rem;
-  background-color: #fff;
-}
-.input-base:focus {
-  outline: none;
-  border-color: var(--color-brand);
-  box-shadow: 0 0 0 4px rgb(6 199 85 / .25);
-}
-.input-base::placeholder { color: #94a3b8; }
+/* 舊 .btn-* / .input-base 過渡相容層已於設計系統遷移完成後移除；
+   按鈕／輸入請改用 @/ui/button、@/ui/input 等元件。 */

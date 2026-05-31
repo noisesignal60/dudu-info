@@ -1,9 +1,14 @@
 "use client";
 
-import { useActionState, useState } from "react";
+import { useActionState, useState, useEffect } from "react";
+import { toast } from "sonner";
 import { updateProfileAction, type ProfileState } from "@/actions/profile";
 import type { MemberProfile } from "@/data/member";
 import { isValidBankAccount } from "@/lib/utils";
+import { Button } from "@/ui/button";
+import { Input } from "@/ui/input";
+import { Label } from "@/ui/label";
+import { Alert } from "@/ui/alert";
 
 const initial: ProfileState = { ok: false };
 
@@ -12,25 +17,29 @@ export function ProfileBlock({ member }: { member: MemberProfile }) {
   const [state, action, pending] = useActionState(updateProfileAction, initial);
   const [bankAcc, setBankAcc] = useState(member.bankAccount ?? "");
   const [bankAccErr, setBankAccErr] = useState<string | null>(null);
+  const [acked, setAcked] = useState(false);
 
   function err(k: string) {
     return state.ok === false ? state.fieldErrors?.[k] : undefined;
   }
 
-  // 成功後關閉編輯模式
-  if (state.ok === true && editing) {
-    queueMicrotask(() => setEditing(false));
+  // render 期間派生：成功後關閉編輯模式（按一次成功只關一次，可再次編輯）
+  if (state.ok && !acked) {
+    setAcked(true);
+    setEditing(false);
+  } else if (!state.ok && acked) {
+    setAcked(false);
   }
+
+  // 副作用：成功通知（effect 內不呼叫 setState）
+  useEffect(() => {
+    if (state.ok) toast.success(state.message ?? "資料已更新");
+  }, [state]);
 
   if (!editing) {
     return (
       <div>
-        {state.ok === true && (
-          <div className="mb-4 rounded-xl bg-brand-soft text-brand-dark p-3 font-medium">
-            ✓ {state.message}
-          </div>
-        )}
-        <dl className="grid grid-cols-1 sm:grid-cols-2 gap-x-5 gap-y-3">
+        <dl className="grid grid-cols-1 sm:grid-cols-2 gap-3">
           <Item label="姓名" value={member.name} />
           <Item label="Email" value={member.email} />
           <Item label="電話" value={member.phone} />
@@ -48,9 +57,9 @@ export function ProfileBlock({ member }: { member: MemberProfile }) {
           <Item label="銀行帳號" value={member.bankAccount} />
         </dl>
         <div className="mt-5 flex gap-3">
-          <button onClick={() => setEditing(true)} className="btn-secondary">
+          <Button variant="secondary" size="touch" onClick={() => setEditing(true)}>
             編輯資料
-          </button>
+          </Button>
         </div>
         <p className="mt-3 text-xs text-slate-500">
           ※ 銀行存摺圖片為憑證，無法自行更換；如需更換請聯絡客服。
@@ -75,16 +84,17 @@ export function ProfileBlock({ member }: { member: MemberProfile }) {
         defaultValue={member.bankCode ?? ""}
         name="bankCode"
       />
-      <div>
-        <label className="block mb-2 font-semibold text-slate-800">
+      <div className="space-y-2">
+        <Label>
           銀行帳號 <span className="text-money">*</span>
-        </label>
-        <input
+        </Label>
+        <Input
           name="bankAccount"
           required
           inputMode="numeric"
-          className="input-base"
+          inputSize="touch"
           value={bankAcc}
+          aria-invalid={!!(bankAccErr || err("bankAccount"))}
           onChange={(e) => {
             const v = e.target.value.replace(/[^\d]/g, "");
             setBankAcc(v);
@@ -95,30 +105,29 @@ export function ProfileBlock({ member }: { member: MemberProfile }) {
           }}
         />
         {(bankAccErr || err("bankAccount")) && (
-          <p className="mt-1.5 text-sm text-money font-medium">
+          <p className="text-sm text-money font-medium">
             {bankAccErr ?? err("bankAccount")}
           </p>
         )}
       </div>
 
       {state.ok === false && state.error && (
-        <div className="rounded-xl bg-red-50 border border-red-200 text-red-700 p-3">
-          {state.error}
-        </div>
+        <Alert variant="danger">{state.error}</Alert>
       )}
 
       <div className="flex gap-3 pt-2">
-        <button type="submit" className="btn-primary flex-1" disabled={pending}>
+        <Button type="submit" size="touch" className="flex-1" disabled={pending}>
           {pending ? "儲存中…" : "儲存變更"}
-        </button>
-        <button
+        </Button>
+        <Button
           type="button"
-          className="btn-secondary"
+          variant="secondary"
+          size="touch"
           onClick={() => setEditing(false)}
           disabled={pending}
         >
           取消
-        </button>
+        </Button>
       </div>
     </form>
   );
@@ -133,14 +142,22 @@ function Item({
   value: string | null | undefined;
   highlight?: boolean;
 }) {
+  if (highlight) {
+    // 推薦碼：顯眼的純品牌色背板
+    return (
+      <div className="rounded-xl bg-brand px-4 py-3 sm:col-span-2">
+        <dt className="text-sm font-medium text-white/85">{label}</dt>
+        <dd className="mt-0.5 text-2xl font-black tracking-widest text-white">
+          {value || "—"}
+        </dd>
+      </div>
+    );
+  }
+
   return (
-    <div>
+    <div className="rounded-xl border border-hairline bg-canvas px-4 py-3">
       <dt className="text-sm text-slate-500">{label}</dt>
-      <dd
-        className={`mt-0.5 font-semibold ${
-          highlight ? "text-brand-dark tracking-widest" : "text-slate-900"
-        }`}
-      >
+      <dd className="mt-0.5 font-semibold text-slate-900 break-words">
         {value || "—"}
       </dd>
     </div>
@@ -163,19 +180,20 @@ function Field({
   err?: string;
 }) {
   return (
-    <div>
-      <label className="block mb-2 font-semibold text-slate-800">
+    <div className="space-y-2">
+      <Label>
         {label}
-        {required && <span className="text-money ml-1">*</span>}
-      </label>
-      <input
+        {required && <span className="text-money">*</span>}
+      </Label>
+      <Input
         name={name}
         type={type}
         defaultValue={defaultValue}
         required={required}
-        className="input-base"
+        inputSize="touch"
+        aria-invalid={!!err}
       />
-      {err && <p className="mt-1.5 text-sm text-money font-medium">{err}</p>}
+      {err && <p className="text-sm text-money font-medium">{err}</p>}
     </div>
   );
 }

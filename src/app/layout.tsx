@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from "next";
 import { Noto_Sans_TC } from "next/font/google";
 import "./globals.css";
+import { Toaster } from "@/ui/sonner";
 
 const notoSans = Noto_Sans_TC({
   variable: "--font-noto-tc",
@@ -18,7 +19,7 @@ export const viewport: Viewport = {
   width: "device-width",
   initialScale: 1,
   maximumScale: 5,
-  themeColor: "#06C755",
+  themeColor: "#1E293B",
 };
 
 export default function RootLayout({
@@ -29,8 +30,9 @@ export default function RootLayout({
       lang="zh-Hant"
       className={`${notoSans.variable} h-full antialiased`}
     >
-      <body className="min-h-full bg-slate-50 text-slate-900 text-base">
+      <body className="min-h-full bg-background text-foreground text-base">
         {children}
+        <Toaster />
       </body>
     </html>
   );

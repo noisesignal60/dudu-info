@@ -8,7 +8,7 @@ export default function NetworkPage() {
   return (
     <div className="space-y-5">
       <div>
-        <h1 className="text-2xl font-black text-slate-900">網絡樹狀圖</h1>
+        <h1 className="font-serif text-2xl font-black text-ink">網絡樹狀圖</h1>
         <p className="text-slate-500 mt-1 text-sm">
           視覺化會員推薦關係，點擊節點可前往會員詳情
         </p>

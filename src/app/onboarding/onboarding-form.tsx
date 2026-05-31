@@ -3,6 +3,10 @@
 import { useActionState, useState } from "react";
 import { completeOnboardingAction, type OnboardingState } from "@/actions/onboarding";
 import { isValidBankAccount } from "@/lib/utils";
+import { Button } from "@/ui/button";
+import { Input } from "@/ui/input";
+import { Label } from "@/ui/label";
+import { Alert } from "@/ui/alert";
 
 const initial: OnboardingState = { ok: false };
 
@@ -18,34 +22,32 @@ export function OnboardingForm() {
 
   return (
     <form action={action} className="space-y-5">
-      {/* 全域錯誤 */}
       {state.ok === false && state.error && (
-        <div className="rounded-xl bg-red-50 border border-red-200 text-red-700 p-4">
-          {state.error}
-        </div>
+        <Alert variant="danger">{state.error}</Alert>
       )}
 
       <Field label="姓名" required error={err("name")}>
-        <input name="name" required className="input-base" placeholder="王大明" />
+        <Input name="name" required inputSize="touch" placeholder="王大明" aria-invalid={!!err("name")} />
       </Field>
 
       <Field label="行動電話" required error={err("phone")}>
-        <input
+        <Input
           name="phone"
           required
           type="tel"
           inputMode="tel"
-          className="input-base"
+          inputSize="touch"
           placeholder="0912345678"
+          aria-invalid={!!err("phone")}
         />
       </Field>
 
       <Field label="銀行戶名" required error={err("bankHolder")}>
-        <input name="bankHolder" required className="input-base" placeholder="王大明" />
+        <Input name="bankHolder" required inputSize="touch" placeholder="王大明" aria-invalid={!!err("bankHolder")} />
       </Field>
 
       <Field label="銀行代碼（選填）">
-        <input name="bankCode" className="input-base" placeholder="例如：004 臺灣銀行" />
+        <Input name="bankCode" inputSize="touch" placeholder="例如：004 臺灣銀行" />
       </Field>
 
       <Field
@@ -54,13 +56,14 @@ export function OnboardingForm() {
         hint="請輸入 10~16 碼數字（不含 - 符號）"
         error={bankAccountError ?? err("bankAccount")}
       >
-        <input
+        <Input
           name="bankAccount"
           required
           inputMode="numeric"
-          className="input-base"
+          inputSize="touch"
           placeholder="0000000000000"
           value={bankAccount}
+          aria-invalid={!!(bankAccountError ?? err("bankAccount"))}
           onChange={(e) => {
             const v = e.target.value.replace(/[^\d]/g, "");
             setBankAccount(v);
@@ -98,7 +101,7 @@ export function OnboardingForm() {
           />
         </label>
         {previewUrl && (
-          <div className="mt-3 rounded-xl overflow-hidden border border-slate-200">
+          <div className="mt-3 rounded-xl overflow-hidden border border-hairline">
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img src={previewUrl} alt="存摺預覽" className="w-full" />
             <p className="text-xs text-slate-500 p-2 text-center">
@@ -109,21 +112,18 @@ export function OnboardingForm() {
       </Field>
 
       <Field label="推薦碼（選填）" hint="若有介紹人，請輸入對方的推薦碼">
-        <input
+        <Input
           name="referralCode"
-          className="input-base uppercase"
+          inputSize="touch"
+          className="uppercase"
           placeholder="例如：AB3X9Z"
           maxLength={10}
         />
       </Field>
 
-      <button
-        type="submit"
-        className="btn-primary w-full text-xl mt-4"
-        disabled={pending}
-      >
+      <Button type="submit" size="touch" className="w-full text-xl mt-4" disabled={pending}>
         {pending ? "送出中…" : "完成註冊，進入系統"}
-      </button>
+      </Button>
     </form>
   );
 }
@@ -142,17 +142,15 @@ function Field({
   children: React.ReactNode;
 }) {
   return (
-    <div>
-      <label className="block mb-2 font-semibold text-slate-800">
+    <div className="space-y-2">
+      <Label>
         {label}
-        {required && <span className="text-money ml-1">*</span>}
-      </label>
+        {required && <span className="text-money">*</span>}
+      </Label>
       {children}
-      {hint && !error && (
-        <p className="mt-1.5 text-sm text-slate-500">{hint}</p>
-      )}
+      {hint && !error && <p className="text-sm text-slate-500">{hint}</p>}
       {error && (
-        <p className="mt-1.5 text-sm text-money font-medium" role="alert">
+        <p className="text-sm text-money font-medium" role="alert">
           {error}
         </p>
       )}

@@ -1,8 +1,10 @@
 "use client";
 
-import { Search, X } from "lucide-react";
+import { X } from "lucide-react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useState, useTransition } from "react";
+import { Button } from "@/ui/button";
+import { Input } from "@/ui/input";
 
 export function MemberSearchBar() {
   const router = useRouter();
@@ -36,13 +38,13 @@ export function MemberSearchBar() {
       className="flex gap-2"
     >
       <div className="relative flex-1 max-w-xl">
-        <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400" />
-        <input
+        <Input
           type="search"
+          inputSize="sm"
           value={q}
           onChange={(e) => setQ(e.target.value)}
           placeholder="搜尋姓名、LINE 名稱、推薦碼、Email 或電話…"
-          className="input-base pl-10"
+          className="pr-10"
         />
         {q && (
           <button
@@ -51,16 +53,16 @@ export function MemberSearchBar() {
               setQ("");
               submit("");
             }}
-            className="absolute right-2 top-1/2 -translate-y-1/2 p-1.5 rounded-md hover:bg-slate-100"
+            className="absolute right-2 top-1/2 -translate-y-1/2 p-1.5 rounded-md hover:bg-secondary"
             aria-label="清除搜尋"
           >
             <X className="w-4 h-4 text-slate-500" />
           </button>
         )}
       </div>
-      <button type="submit" className="btn-primary !min-h-12 !text-base" disabled={isPending}>
+      <Button type="submit" size="sm" disabled={isPending}>
         {isPending ? "搜尋中…" : "搜尋"}
-      </button>
+      </Button>
     </form>
   );
 }

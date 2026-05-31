@@ -3,15 +3,26 @@ import { listAdmins } from "@/data/admin/admins";
 import { getCurrentAdmin } from "@/lib/admin-session";
 import { formatDateTime } from "@/lib/utils";
 import { AdminListActions } from "./admin-list-actions";
+import { Badge } from "@/ui/badge";
+import {
+  Table,
+  TableHeader,
+  TableBody,
+  TableRow,
+  TableHead,
+  TableCell,
+} from "@/ui/table";
+import { EmptyState } from "@/ui/empty-state";
+import { Skeleton } from "@/ui/skeleton";
 
 export const metadata = { title: "管理員管理 ｜ 後台" };
 
 export default function AdminAdminsPage() {
   return (
-    <div className="space-y-5">
+    <div className="space-y-6">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
-          <h1 className="text-2xl font-black text-slate-900">管理員管理</h1>
+          <h1 className="font-serif text-2xl font-black text-slate-900">管理員管理</h1>
           <p className="text-slate-500 mt-1 text-sm">
             管理後台與帳簿系統的管理員帳號
           </p>
@@ -30,112 +41,75 @@ async function AdminTable() {
   const [rows, me] = await Promise.all([listAdmins(), getCurrentAdmin()]);
 
   return (
-    <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
+    <div className="rounded-card border border-hairline overflow-hidden">
       {rows.length === 0 ? (
-        <div className="py-16 text-center text-slate-500">
-          尚無管理員 — 第一位管理員需用 `npx tsx scripts/seed-admin.ts` 建立
-        </div>
+        <EmptyState
+          title="尚無管理員"
+          description="第一位管理員需用 `npx tsx scripts/seed-admin.ts` 建立"
+        />
       ) : (
-        <div className="overflow-x-auto">
-          <table className="w-full text-sm">
-            <thead className="bg-slate-50 text-slate-600">
-              <tr className="text-left">
-                <Th>帳號</Th>
-                <Th>姓名</Th>
-                <Th>建立時間</Th>
-                <Th>最後登入</Th>
-                <Th>狀態</Th>
-                <Th align="right">操作</Th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-slate-100">
-              {rows.map((a) => {
-                const isSelf = a.id === me?.adminId;
-                return (
-                  <tr key={a.id} className="hover:bg-slate-50">
-                    <Td>
-                      <code className="text-sm font-mono bg-slate-100 px-1.5 py-0.5 rounded">
-                        {a.username}
-                      </code>
-                      {isSelf && (
-                        <span className="ml-2 text-xs text-brand-dark font-bold">
-                          （我）
-                        </span>
-                      )}
-                    </Td>
-                    <Td>{a.displayName}</Td>
-                    <Td className="text-xs text-slate-500 whitespace-nowrap">
-                      {formatDateTime(a.createdAt)}
-                    </Td>
-                    <Td className="text-xs text-slate-500 whitespace-nowrap">
-                      {a.lastLoginAt ? formatDateTime(a.lastLoginAt) : "從未登入"}
-                    </Td>
-                    <Td>
-                      {a.isActive ? (
-                        <span className="inline-flex items-center px-2 py-0.5 rounded-full bg-green-100 text-green-700 text-xs font-bold">
-                          啟用
-                        </span>
-                      ) : (
-                        <span className="inline-flex items-center px-2 py-0.5 rounded-full bg-slate-200 text-slate-600 text-xs font-bold">
-                          停用
-                        </span>
-                      )}
-                    </Td>
-                    <Td align="right">
-                      <AdminListActions mode="row" admin={a} isSelf={isSelf} />
-                    </Td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
-        </div>
+        <Table>
+          <TableHeader>
+            <TableRow>
+              <TableHead>帳號</TableHead>
+              <TableHead>姓名</TableHead>
+              <TableHead>建立時間</TableHead>
+              <TableHead>最後登入</TableHead>
+              <TableHead>狀態</TableHead>
+              <TableHead className="text-right">操作</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {rows.map((a) => {
+              const isSelf = a.id === me?.adminId;
+              return (
+                <TableRow key={a.id}>
+                  <TableCell>
+                    <Badge variant="neutral" size="sm" className="font-mono">
+                      {a.username}
+                    </Badge>
+                    {isSelf && (
+                      <span className="ml-2 text-xs text-brand-dark font-bold">
+                        （我）
+                      </span>
+                    )}
+                  </TableCell>
+                  <TableCell>{a.displayName}</TableCell>
+                  <TableCell className="text-xs text-slate-500 whitespace-nowrap">
+                    {formatDateTime(a.createdAt)}
+                  </TableCell>
+                  <TableCell className="text-xs text-slate-500 whitespace-nowrap">
+                    {a.lastLoginAt ? formatDateTime(a.lastLoginAt) : "從未登入"}
+                  </TableCell>
+                  <TableCell>
+                    {a.isActive ? (
+                      <Badge variant="positive" size="sm">
+                        啟用
+                      </Badge>
+                    ) : (
+                      <Badge variant="neutral" size="sm">
+                        停用
+                      </Badge>
+                    )}
+                  </TableCell>
+                  <TableCell className="text-right">
+                    <AdminListActions mode="row" admin={a} isSelf={isSelf} />
+                  </TableCell>
+                </TableRow>
+              );
+            })}
+          </TableBody>
+        </Table>
       )}
     </div>
   );
 }
 
-function Th({
-  children,
-  align = "left",
-}: {
-  children: React.ReactNode;
-  align?: "left" | "right";
-}) {
-  return (
-    <th
-      className={`px-4 py-3 text-xs font-bold uppercase whitespace-nowrap ${
-        align === "right" ? "text-right" : "text-left"
-      }`}
-    >
-      {children}
-    </th>
-  );
-}
-
-function Td({
-  children,
-  className = "",
-  align = "left",
-}: {
-  children: React.ReactNode;
-  className?: string;
-  align?: "left" | "right";
-}) {
-  return (
-    <td
-      className={`px-4 py-3 ${align === "right" ? "text-right" : "text-left"} ${className}`}
-    >
-      {children}
-    </td>
-  );
-}
-
 function TableSkeleton() {
   return (
-    <div className="bg-white rounded-2xl border border-slate-200 p-8 space-y-3">
+    <div className="bg-surface rounded-card border border-hairline p-8 space-y-3">
       {Array.from({ length: 5 }).map((_, i) => (
-        <div key={i} className="h-10 bg-slate-100 rounded animate-pulse" />
+        <Skeleton key={i} className="h-10 rounded" />
       ))}
     </div>
   );

@@ -1,7 +1,8 @@
 "use client";
 
-import { useState, useTransition, useActionState } from "react";
-import { Plus, X } from "lucide-react";
+import { useState, useTransition, useActionState, useEffect } from "react";
+import { toast } from "sonner";
+import { X } from "lucide-react";
 import {
   createDepartmentAction,
   renameDepartmentAction,
@@ -9,6 +10,15 @@ import {
   type DeptFormState,
 } from "@/actions/reports-departments";
 import type { Department } from "@/data/reports/departments";
+import { Button } from "@/ui/button";
+import { Input } from "@/ui/input";
+import { Alert } from "@/ui/alert";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/ui/dialog";
 
 const initial: DeptFormState = { ok: false };
 
@@ -20,70 +30,60 @@ export function DepartmentManagerButton({
   const [open, setOpen] = useState(false);
   return (
     <>
-      <button
-        type="button"
-        onClick={() => setOpen(true)}
-        className="btn-secondary !min-h-10 !text-sm"
-      >
+      <Button variant="secondary" size="sm" onClick={() => setOpen(true)}>
         編輯部門
-      </button>
-      {open && (
-        <DeptModal departments={departments} onClose={() => setOpen(false)} />
-      )}
+      </Button>
+      <DeptModal departments={departments} open={open} setOpen={setOpen} />
     </>
   );
 }
 
 function DeptModal({
   departments,
-  onClose,
+  open,
+  setOpen,
 }: {
   departments: Department[];
-  onClose: () => void;
+  open: boolean;
+  setOpen: (v: boolean) => void;
 }) {
-  const [state, action, pending] = useActionState(createDepartmentAction, initial);
+  const [state, action, pending] = useActionState(
+    createDepartmentAction,
+    initial,
+  );
+
+  useEffect(() => {
+    if (state.ok) toast.success(state.message ?? "已新增部門");
+  }, [state]);
 
   return (
-    <div
-      className="fixed inset-0 z-50 bg-black/50 grid place-items-center p-4 overflow-y-auto"
-      onClick={onClose}
-    >
-      <div
-        className="bg-white rounded-2xl shadow-xl w-full max-w-md p-6 my-8"
-        onClick={(e) => e.stopPropagation()}
-      >
-        <div className="flex items-center justify-between mb-4">
-          <h3 className="text-lg font-bold text-slate-900">編輯部門</h3>
-          <button onClick={onClose} className="text-slate-500 hover:text-slate-900">
-            <X className="w-5 h-5" />
-          </button>
-        </div>
+    <Dialog open={open} onOpenChange={setOpen}>
+      <DialogContent>
+        <DialogHeader>
+          <DialogTitle>編輯部門</DialogTitle>
+        </DialogHeader>
 
         {/* 新增 */}
-        <form action={action} className="flex gap-2 mb-5">
-          <input
+        <form action={action} className="flex gap-2">
+          <Input
             type="text"
             name="name"
-            className="input-base flex-1"
+            inputSize="sm"
+            className="flex-1"
             placeholder="新增部門名稱"
             required
           />
-          <button
-            type="submit"
-            disabled={pending}
-            className="btn-primary !min-h-10 !text-sm shrink-0"
-          >
-            <Plus className="w-4 h-4" />
+          <Button type="submit" size="sm" disabled={pending} className="shrink-0">
             新增
-          </button>
+          </Button>
         </form>
         {!state.ok && state.fieldErrors?.name && (
-          <p className="text-red-600 text-sm -mt-3 mb-3">
+          <p className="text-money text-sm font-medium -mt-2">
             {state.fieldErrors.name}
           </p>
         )}
         {!state.ok && state.error && (
-          <p className="text-red-600 text-sm -mt-3 mb-3">{state.error}</p>
+          <Alert variant="danger">{state.error}</Alert>
         )}
 
         {/* 列表（inline rename + 刪除）*/}
@@ -96,8 +96,8 @@ function DeptModal({
             departments.map((d) => <DeptRow key={d.id} dept={d} />)
           )}
         </div>
-      </div>
-    </div>
+      </DialogContent>
+    </Dialog>
   );
 }
 
@@ -114,7 +114,7 @@ function DeptRow({ dept }: { dept: Department }) {
         setMsg(res.error ?? "更新失敗");
         setName(dept.name);
       } else {
-        setMsg("✓ 已儲存");
+        setMsg("已儲存");
         setTimeout(() => setMsg(null), 1500);
       }
     });
@@ -130,24 +130,27 @@ function DeptRow({ dept }: { dept: Department }) {
 
   return (
     <div className="flex items-center gap-2 group">
-      <input
+      <Input
         type="text"
         value={name}
         onChange={(e) => setName(e.target.value)}
         onBlur={onBlur}
         disabled={pending}
-        className="input-base !min-h-10 !text-sm flex-1"
+        inputSize="sm"
+        className="flex-1"
       />
       {msg && <span className="text-xs text-slate-500 shrink-0">{msg}</span>}
-      <button
+      <Button
         type="button"
+        variant="ghost"
+        size="icon"
         onClick={onDelete}
         disabled={pending}
-        className="opacity-0 group-hover:opacity-100 text-red-600 hover:text-red-700 p-2 transition"
+        className="opacity-0 group-hover:opacity-100 text-money transition"
         aria-label="刪除"
       >
-        <X className="w-4 h-4" />
-      </button>
+        <X />
+      </Button>
     </div>
   );
 }

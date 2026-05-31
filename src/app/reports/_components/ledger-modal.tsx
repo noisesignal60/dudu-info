@@ -1,7 +1,7 @@
 "use client";
 
-import { useActionState, useState } from "react";
-import { Plus } from "lucide-react";
+import { useActionState, useEffect, useState } from "react";
+import { toast } from "sonner";
 import {
   createLedgerEntryAction,
   updateLedgerEntryAction,
@@ -9,6 +9,24 @@ import {
 } from "@/actions/reports-ledger";
 import type { LedgerEntry } from "@/data/reports/ledger";
 import type { Department } from "@/data/reports/departments";
+import { Button } from "@/ui/button";
+import { Input } from "@/ui/input";
+import { Label } from "@/ui/label";
+import { Alert } from "@/ui/alert";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/ui/select";
+import {
+  Dialog,
+  DialogContent,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/ui/dialog";
 
 const initial: LedgerFormState = { ok: false };
 
@@ -20,20 +38,14 @@ export function NewLedgerEntryButton({
   const [open, setOpen] = useState(false);
   return (
     <>
-      <button
-        type="button"
-        onClick={() => setOpen(true)}
-        className="btn-primary !min-h-10 !text-sm"
-      >
-        <Plus className="w-4 h-4" />
+      <Button size="sm" onClick={() => setOpen(true)}>
         新增記錄
-      </button>
-      {open && (
-        <LedgerEntryModal
-          departments={departments}
-          onClose={() => setOpen(false)}
-        />
-      )}
+      </Button>
+      <LedgerEntryModal
+        departments={departments}
+        open={open}
+        setOpen={setOpen}
+      />
     </>
   );
 }
@@ -41,34 +53,41 @@ export function NewLedgerEntryButton({
 export function LedgerEntryModal({
   entry,
   departments,
-  onClose,
+  open,
+  setOpen,
 }: {
   entry?: LedgerEntry;
   departments: Department[];
-  onClose: () => void;
+  open: boolean;
+  setOpen: (v: boolean) => void;
 }) {
   const isEdit = !!entry;
   const action = isEdit
     ? updateLedgerEntryAction.bind(null, entry!.id)
     : createLedgerEntryAction;
   const [state, formAction, pending] = useActionState(action, initial);
-  if (state.ok) setTimeout(onClose, 600);
+
+  const [acked, setAcked] = useState(false);
+  if (state.ok && !acked) {
+    setAcked(true);
+    setOpen(false);
+  } else if (!state.ok && acked) {
+    setAcked(false);
+  }
+  useEffect(() => {
+    if (state.ok) toast.success(state.message ?? "已儲存");
+  }, [state]);
 
   return (
-    <div
-      className="fixed inset-0 z-50 bg-black/50 grid place-items-center p-4 overflow-y-auto"
-      onClick={onClose}
-    >
-      <div
-        className="bg-white rounded-2xl shadow-xl w-full max-w-lg p-6 my-8"
-        onClick={(e) => e.stopPropagation()}
-      >
-        <h3 className="text-lg font-bold text-slate-900 mb-1">
-          {isEdit ? "編輯收支記錄" : "新增收支記錄"}
-        </h3>
-        <p className="text-xs text-amber-700 bg-amber-50 px-3 py-2 rounded-lg mb-4">
+    <Dialog open={open} onOpenChange={setOpen}>
+      <DialogContent className="max-w-lg">
+        <DialogHeader>
+          <DialogTitle>{isEdit ? "編輯收支記錄" : "新增收支記錄"}</DialogTitle>
+        </DialogHeader>
+
+        <Alert variant="warning">
           收入請填正數，支出請填正數（系統會分別記在收入/支出欄）
-        </p>
+        </Alert>
 
         <form action={formAction} className="space-y-3">
           <div className="grid grid-cols-2 gap-3">
@@ -76,17 +95,28 @@ export function LedgerEntryModal({
               label="日期 *"
               name="entryDate"
               type="date"
-              defaultValue={entry?.entryDate ?? new Date().toISOString().slice(0, 10)}
+              defaultValue={
+                entry?.entryDate ?? new Date().toISOString().slice(0, 10)
+              }
             />
-            <FieldSelect
-              label="部門名稱 *"
-              name="departmentId"
-              defaultValue={entry?.departmentId ?? ""}
-              options={[
-                { value: "", label: "請選擇" },
-                ...departments.map((d) => ({ value: d.id, label: d.name })),
-              ]}
-            />
+            <div className="space-y-2">
+              <Label htmlFor="departmentId">部門名稱 *</Label>
+              <Select
+                name="departmentId"
+                defaultValue={entry?.departmentId ?? ""}
+              >
+                <SelectTrigger size="sm">
+                  <SelectValue placeholder="請選擇" />
+                </SelectTrigger>
+                <SelectContent>
+                  {departments.map((d) => (
+                    <SelectItem key={d.id} value={d.id}>
+                      {d.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
           </div>
           <FieldError state={state} field="entryDate" />
           <FieldError state={state} field="departmentId" />
@@ -123,42 +153,29 @@ export function LedgerEntryModal({
           <FieldError state={state} field="income" />
           <FieldError state={state} field="expense" />
 
-          <Field
-            label="備註1"
-            name="note1"
-            defaultValue={entry?.note1 ?? ""}
-          />
-          <Field
-            label="備註2"
-            name="note2"
-            defaultValue={entry?.note2 ?? ""}
-          />
+          <Field label="備註1" name="note1" defaultValue={entry?.note1 ?? ""} />
+          <Field label="備註2" name="note2" defaultValue={entry?.note2 ?? ""} />
 
-          {state.ok ? (
-            <p className="text-sm text-green-700 font-medium">{state.message}</p>
-          ) : state.error ? (
-            <p className="text-sm text-red-600">{state.error}</p>
+          {!state.ok && state.error ? (
+            <Alert variant="danger">{state.error}</Alert>
           ) : null}
 
-          <div className="flex justify-end gap-2 pt-2">
-            <button
+          <DialogFooter>
+            <Button
               type="button"
-              onClick={onClose}
-              className="btn-secondary !min-h-10 !text-sm"
+              variant="secondary"
+              size="sm"
+              onClick={() => setOpen(false)}
             >
               取消
-            </button>
-            <button
-              type="submit"
-              disabled={pending}
-              className="btn-primary !min-h-10 !text-sm"
-            >
+            </Button>
+            <Button type="submit" size="sm" disabled={pending}>
               {pending ? "儲存中..." : isEdit ? "儲存變更" : "新增"}
-            </button>
-          </div>
+            </Button>
+          </DialogFooter>
         </form>
-      </div>
-    </div>
+      </DialogContent>
+    </Dialog>
   );
 }
 
@@ -178,46 +195,18 @@ function Field({
   placeholder?: string;
 }) {
   return (
-    <label className="block">
-      <span className="block text-sm font-medium text-slate-700 mb-1">
-        {label}
-      </span>
-      <input
+    <div className="space-y-2">
+      <Label htmlFor={name}>{label}</Label>
+      <Input
+        id={name}
         type={type}
         name={name}
         step={step}
         defaultValue={defaultValue}
         placeholder={placeholder}
-        className="input-base"
+        inputSize="sm"
       />
-    </label>
-  );
-}
-
-function FieldSelect({
-  label,
-  name,
-  defaultValue,
-  options,
-}: {
-  label: string;
-  name: string;
-  defaultValue?: string;
-  options: { value: string; label: string }[];
-}) {
-  return (
-    <label className="block">
-      <span className="block text-sm font-medium text-slate-700 mb-1">
-        {label}
-      </span>
-      <select name={name} defaultValue={defaultValue} className="input-base">
-        {options.map((o) => (
-          <option key={o.value} value={o.value}>
-            {o.label}
-          </option>
-        ))}
-      </select>
-    </label>
+    </div>
   );
 }
 
@@ -231,6 +220,5 @@ function FieldError({
   if (state.ok) return null;
   const msg = state.fieldErrors?.[field];
   if (!msg) return null;
-  return <p className="text-red-600 text-xs -mt-2">{msg}</p>;
+  return <p className="text-money text-sm font-medium -mt-2">{msg}</p>;
 }
-

@@ -1,4 +1,5 @@
 import { Suspense } from "react";
+import { Skeleton } from "@/ui/skeleton";
 import { listDepartments } from "@/data/reports/departments";
 import { aggregateLedger } from "@/data/reports/ledger";
 import { LedgerStatsBar } from "../_components/stats-bar";
@@ -15,22 +16,22 @@ export default function ReportsYearlyPage({
   searchParams: SearchParams;
 }) {
   return (
-    <div className="space-y-5">
+    <div className="space-y-6">
       <div>
-        <h1 className="text-2xl font-black text-slate-900">年報表</h1>
+        <h1 className="font-serif text-2xl font-black text-slate-900">年報表</h1>
         <p className="text-slate-500 mt-1 text-sm">
           以年為單位匯總收入、支出、淨額
         </p>
       </div>
 
       <Suspense
-        fallback={<div className="h-14 bg-slate-200 rounded-2xl animate-pulse" />}
+        fallback={<Skeleton className="h-14 rounded-card" />}
       >
         <FilterBlock searchParams={searchParams} />
       </Suspense>
 
       <Suspense
-        fallback={<div className="h-24 bg-slate-200 rounded-2xl animate-pulse" />}
+        fallback={<Skeleton className="h-24 rounded-card" />}
       >
         <Content searchParams={searchParams} />
       </Suspense>

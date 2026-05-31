@@ -1,4 +1,5 @@
-import { formatCurrency } from "@/lib/utils";
+import { formatCurrency, cn } from "@/lib/utils";
+import { Card } from "@/ui/card";
 
 export function LedgerStatsBar({
   income,
@@ -10,9 +11,9 @@ export function LedgerStatsBar({
   const net = income - expense;
   return (
     <div className="grid grid-cols-3 gap-3">
-      <Card label="總收入" value={income} tone="positive" />
-      <Card label="總支出" value={expense} tone="negative" />
-      <Card
+      <StatCard label="總收入" value={income} tone="positive" />
+      <StatCard label="總支出" value={expense} tone="negative" />
+      <StatCard
         label="淨額"
         value={net}
         tone={net >= 0 ? "positive" : "negative"}
@@ -22,7 +23,7 @@ export function LedgerStatsBar({
   );
 }
 
-function Card({
+function StatCard({
   label,
   value,
   tone,
@@ -39,18 +40,12 @@ function Card({
       ? "bg-green-50 border-green-200"
       : "bg-red-50 border-red-200";
   return (
-    <div
-      className={`rounded-2xl border p-4 ${
-        emphasize ? bg : "bg-white border-slate-200"
-      }`}
-    >
-      <p className="text-xs font-medium text-slate-500">{label}</p>
-      <p
-        className={`mt-1 text-2xl md:text-3xl font-black tabular-nums ${color}`}
-      >
+    <Card className={cn("p-4", emphasize && bg)}>
+      <p className="eyebrow text-slate-500">{label}</p>
+      <p className={cn("fig font-black mt-1.5 text-xl leading-none", color)}>
         {value >= 0 ? "" : "-"}
         {formatCurrency(Math.abs(value))}
       </p>
-    </div>
+    </Card>
   );
 }

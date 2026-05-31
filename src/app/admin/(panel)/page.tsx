@@ -2,8 +2,10 @@ import { Suspense } from "react";
 import { redirect } from "next/navigation";
 import { getCurrentAdmin } from "@/lib/admin-session";
 import { getAdminStats, getRecentActivity } from "@/data/admin/stats";
-import { Users, Wallet, TrendingUp, AlertCircle } from "lucide-react";
 import { formatCurrency, formatDateTime } from "@/lib/utils";
+import { Card, CardHeader, CardTitle, CardContent } from "@/ui/card";
+import { EmptyState } from "@/ui/empty-state";
+import { Skeleton } from "@/ui/skeleton";
 
 export const metadata = {
   title: "儀表板 ｜ 後台",
@@ -20,7 +22,7 @@ export default function AdminDashboardPage() {
         <StatsGrid />
       </Suspense>
 
-      <Suspense fallback={<div className="h-64 bg-slate-200 rounded-2xl animate-pulse" />}>
+      <Suspense fallback={<Skeleton className="h-64 rounded-card" />}>
         <RecentActivity />
       </Suspense>
     </div>
@@ -32,7 +34,7 @@ async function WelcomeBlock() {
   if (!admin) redirect("/admin/login");
   return (
     <div>
-      <h1 className="text-2xl font-black text-slate-900">儀表板</h1>
+      <h1 className="font-serif text-2xl font-black text-slate-900">儀表板</h1>
       <p className="text-slate-500 mt-1">
         歡迎回來，{admin.displayName ?? admin.username}
       </p>
@@ -43,8 +45,8 @@ async function WelcomeBlock() {
 function HeaderSkeleton() {
   return (
     <div className="space-y-2">
-      <div className="h-7 w-28 bg-slate-200 rounded animate-pulse" />
-      <div className="h-4 w-40 bg-slate-200 rounded animate-pulse" />
+      <Skeleton className="h-7 w-28 rounded" />
+      <Skeleton className="h-4 w-40 rounded" />
     </div>
   );
 }
@@ -56,25 +58,21 @@ async function StatsGrid() {
       <AdminStatCard
         label="總會員數"
         value={`${stats.totalMembers.toLocaleString("zh-TW")} 人`}
-        icon={<Users className="w-6 h-6" />}
         tone="default"
       />
       <AdminStatCard
         label="總交易金額"
         value={formatCurrency(stats.totalTransactionAmount)}
-        icon={<Wallet className="w-6 h-6" />}
         tone="default"
       />
       <AdminStatCard
         label="總分潤金額"
         value={formatCurrency(stats.totalCommissionAmount)}
-        icon={<TrendingUp className="w-6 h-6" />}
-        tone="default"
+        tone="accent"
       />
       <AdminStatCard
         label="待審核項目"
         value={`${stats.pendingApprovalCount} 筆`}
-        icon={<AlertCircle className="w-6 h-6" />}
         tone={stats.pendingApprovalCount > 0 ? "alert" : "default"}
       />
     </div>
@@ -84,45 +82,33 @@ async function StatsGrid() {
 function AdminStatCard({
   label,
   value,
-  icon,
   tone,
 }: {
   label: string;
   value: string;
-  icon: React.ReactNode;
-  tone: "default" | "alert";
+  tone: "default" | "alert" | "accent";
 }) {
   return (
-    <div
-      className={`rounded-2xl p-5 border shadow-sm ${
-        tone === "alert"
-          ? "bg-red-50 border-red-200"
-          : "bg-white border-slate-200"
+    <Card
+      className={`p-4 ${
+        tone === "alert" ? "bg-red-50 border-red-200" : ""
       }`}
     >
-      <div className="flex items-center justify-between">
-        <span
-          className={`text-sm font-medium ${
-            tone === "alert" ? "text-red-700" : "text-slate-600"
-          }`}
-        >
-          {label}
-        </span>
-        <span
-          className={tone === "alert" ? "text-red-600" : "text-brand"}
-          aria-hidden
-        >
-          {icon}
-        </span>
-      </div>
+      <span className={`eyebrow block ${tone === "alert" ? "text-red-700" : "text-slate-500"}`}>
+        {label}
+      </span>
       <p
-        className={`mt-3 text-3xl font-black ${
-          tone === "alert" ? "text-red-700" : "text-slate-900"
+        className={`fig font-black mt-1.5 text-xl leading-none ${
+          tone === "alert"
+            ? "text-red-700"
+            : tone === "accent"
+              ? "text-accent-blue"
+              : "text-ink"
         }`}
       >
         {value}
       </p>
-    </div>
+    </Card>
   );
 }
 
@@ -130,7 +116,7 @@ function StatsSkeleton() {
   return (
     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
       {Array.from({ length: 4 }).map((_, i) => (
-        <div key={i} className="h-28 bg-slate-200 rounded-2xl animate-pulse" />
+        <Skeleton key={i} className="h-20 rounded-card" />
       ))}
     </div>
   );
@@ -139,37 +125,39 @@ function StatsSkeleton() {
 async function RecentActivity() {
   const items = await getRecentActivity(10);
   return (
-    <section className="bg-white rounded-2xl border border-slate-200 shadow-sm">
-      <header className="px-5 py-4 border-b border-slate-100">
-        <h2 className="text-lg font-bold text-slate-900">最近活動</h2>
-      </header>
-      {items.length === 0 ? (
-        <div className="py-12 text-center text-slate-500">尚無活動紀錄</div>
-      ) : (
-        <ul className="divide-y divide-slate-100">
-          {items.map((a) => (
-            <li
-              key={a.id}
-              className="flex items-center justify-between gap-3 px-5 py-3"
-            >
-              <div className="min-w-0">
-                <p className="font-medium text-slate-900 truncate">{a.title}</p>
-                <p className="text-xs text-slate-500 mt-0.5">
-                  {a.memberName ?? "—"} ・ {formatDateTime(a.createdAt)}
-                </p>
-              </div>
-              <span
-                className={`font-bold ${
-                  a.amount >= 0 ? "text-positive" : "text-money"
-                }`}
+    <Card>
+      <CardHeader>
+        <CardTitle>最近活動</CardTitle>
+      </CardHeader>
+      <CardContent>
+        {items.length === 0 ? (
+          <EmptyState title="尚無活動紀錄" />
+        ) : (
+          <ul className="divide-y divide-hairline">
+            {items.map((a) => (
+              <li
+                key={a.id}
+                className="flex items-center justify-between gap-3 py-3 first:pt-0 last:pb-0"
               >
-                {a.amount >= 0 ? "+" : ""}
-                {formatCurrency(a.amount)}
-              </span>
-            </li>
-          ))}
-        </ul>
-      )}
-    </section>
+                <div className="min-w-0">
+                  <p className="font-medium text-slate-900 truncate">{a.title}</p>
+                  <p className="text-xs text-slate-500 mt-0.5">
+                    {a.memberName ?? "—"} ・ {formatDateTime(a.createdAt)}
+                  </p>
+                </div>
+                <span
+                  className={`fig ${
+                    a.amount >= 0 ? "text-positive" : "text-money"
+                  }`}
+                >
+                  {a.amount >= 0 ? "+" : ""}
+                  {formatCurrency(a.amount)}
+                </span>
+              </li>
+            ))}
+          </ul>
+        )}
+      </CardContent>
+    </Card>
   );
 }

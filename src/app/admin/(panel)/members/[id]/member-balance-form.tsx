@@ -1,34 +1,43 @@
 "use client";
 
-import { useActionState } from "react";
+import { useActionState, useEffect, useState } from "react";
+import { toast } from "sonner";
 import {
   updateMemberBalanceAction,
   type AdminMemberFormState,
 } from "@/actions/admin-members";
 import type { AdminMemberRow } from "@/data/admin/members";
 import { formatCurrency } from "@/lib/utils";
+import { Button } from "@/ui/button";
+import { Input } from "@/ui/input";
+import { Label } from "@/ui/label";
+import { Alert } from "@/ui/alert";
 
 const initial: AdminMemberFormState = { ok: false };
 
 export function MemberBalanceForm({ member }: { member: AdminMemberRow }) {
   const action = updateMemberBalanceAction.bind(null, member.id);
   const [state, formAction, pending] = useActionState(action, initial);
+  const [acked, setAcked] = useState(false);
 
   function err(k: string) {
     return state.ok === false ? state.fieldErrors?.[k] : undefined;
   }
 
+  if (state.ok && !acked) {
+    setAcked(true);
+  } else if (!state.ok && acked) {
+    setAcked(false);
+  }
+
+  useEffect(() => {
+    if (state.ok) toast.success(state.message ?? "已更新");
+  }, [state]);
+
   return (
     <form action={formAction} className="space-y-3">
-      {state.ok === true && (
-        <div className="rounded-xl p-3 text-sm bg-brand-soft text-brand-dark border border-brand/30">
-          {state.message}
-        </div>
-      )}
       {state.ok === false && state.error && (
-        <div className="rounded-xl p-3 text-sm bg-red-50 text-red-700 border border-red-200">
-          {state.error}
-        </div>
+        <Alert variant="danger">{state.error}</Alert>
       )}
 
       <div className="grid sm:grid-cols-3 gap-3">
@@ -52,15 +61,16 @@ export function MemberBalanceForm({ member }: { member: AdminMemberRow }) {
         />
       </div>
 
-      <div className="rounded-xl bg-slate-50 border border-slate-200 p-3 text-sm text-slate-600">
+      <Alert variant="info">
         <span className="font-semibold">鎖定金額：</span>
-        {formatCurrency(member.locked)}（審核中的提領，由系統自動維護）
-      </div>
+        <span className="tabular-nums">{formatCurrency(member.locked)}</span>
+        （審核中的提領，由系統自動維護）
+      </Alert>
 
       <div className="pt-1">
-        <button type="submit" className="btn-primary !min-h-11 !text-base" disabled={pending}>
+        <Button type="submit" size="sm" disabled={pending}>
           {pending ? "儲存中…" : "儲存餘額"}
-        </button>
+        </Button>
       </div>
     </form>
   );
@@ -78,19 +88,20 @@ function Field({
   err?: string;
 }) {
   return (
-    <div>
-      <label className="block mb-1.5 text-sm font-semibold text-slate-700">
-        {label}
-      </label>
-      <input
+    <div className="space-y-2">
+      <Label htmlFor={name}>{label}</Label>
+      <Input
+        id={name}
         name={name}
         type="number"
         min={0}
         step="0.01"
         defaultValue={defaultValue}
-        className="input-base !min-h-10 !text-sm tabular-nums"
+        inputSize="sm"
+        aria-invalid={!!err}
+        className="tabular-nums"
       />
-      {err && <p className="mt-1 text-xs text-money">{err}</p>}
+      {err && <p className="text-sm text-money font-medium">{err}</p>}
     </div>
   );
 }

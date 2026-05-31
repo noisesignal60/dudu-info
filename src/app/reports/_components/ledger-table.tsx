@@ -2,11 +2,22 @@
 
 import { useState, useTransition } from "react";
 import Link from "next/link";
-import { ArrowUpDown, ArrowUp, ArrowDown, Pencil, Trash2 } from "lucide-react";
+import { Pencil, Trash2 } from "lucide-react";
 import type { LedgerEntry, LedgerSortKey } from "@/data/reports/ledger";
 import type { Department } from "@/data/reports/departments";
 import { softDeleteLedgerEntriesAction } from "@/actions/reports-ledger";
 import { formatCurrency, cn } from "@/lib/utils";
+import { Button } from "@/ui/button";
+import { Alert } from "@/ui/alert";
+import { EmptyState } from "@/ui/empty-state";
+import {
+  Table,
+  TableHeader,
+  TableBody,
+  TableRow,
+  TableHead,
+  TableCell,
+} from "@/ui/table";
 import { LedgerEntryModal } from "./ledger-modal";
 
 type SortField = "date" | "department" | "car" | "income" | "expense";
@@ -65,9 +76,11 @@ export function LedgerTable({
 
   if (rows.length === 0) {
     return (
-      <div className="bg-white border border-slate-200 rounded-2xl py-16 text-center text-slate-500">
-        <p>沒有符合條件的記錄</p>
-        <p className="text-sm mt-1">調整篩選條件或新增記錄</p>
+      <div className="bg-surface rounded-card border border-hairline">
+        <EmptyState
+          title="沒有符合條件的記錄"
+          description="調整篩選條件或新增記錄"
+        />
       </div>
     );
   }
@@ -75,149 +88,137 @@ export function LedgerTable({
   return (
     <>
       {editable && selected.size > 0 && (
-        <div className="bg-amber-50 border border-amber-200 rounded-xl px-4 py-2 flex items-center justify-between">
-          <span className="text-sm font-medium text-amber-900">
-            已選 {selected.size} 筆
-          </span>
-          <button
+        <Alert
+          variant="warning"
+          className="items-center justify-between py-2.5"
+        >
+          <span className="font-medium">已選 {selected.size} 筆</span>
+          <Button
             type="button"
+            variant="danger"
+            size="sm"
             onClick={onBatchDelete}
             disabled={pending}
-            className="btn-danger !min-h-9 !text-sm"
           >
-            <Trash2 className="w-4 h-4" />
+            <Trash2 />
             批量刪除 ({selected.size})
-          </button>
-        </div>
+          </Button>
+        </Alert>
       )}
 
       {/* 桌機表格 */}
-      <div className="hidden md:block bg-white border border-slate-200 rounded-2xl shadow-sm overflow-hidden">
-        <div className="overflow-x-auto">
-          <table className="w-full text-sm">
-            <thead className="bg-slate-50 text-slate-600">
-              <tr className="text-left">
+      <div className="hidden md:block rounded-card border border-hairline overflow-hidden">
+        <Table>
+          <TableHeader>
+            <TableRow>
+              {editable && (
+                <TableHead className="w-10">
+                  <input
+                    type="checkbox"
+                    checked={selected.size === rows.length && rows.length > 0}
+                    onChange={toggleAll}
+                    className="w-4 h-4 accent-brand"
+                    aria-label="全選"
+                  />
+                </TableHead>
+              )}
+              <SortableTh
+                field="date"
+                label="日期"
+                basePath={basePath}
+                current={currentSort}
+              />
+              <SortableTh
+                field="department"
+                label="部門名稱"
+                basePath={basePath}
+                current={currentSort}
+              />
+              <SortableTh
+                field="car"
+                label="車號/人名"
+                basePath={basePath}
+                current={currentSort}
+              />
+              <TableHead>項目</TableHead>
+              <SortableTh
+                field="income"
+                label="收入"
+                basePath={basePath}
+                current={currentSort}
+                align="right"
+              />
+              <SortableTh
+                field="expense"
+                label="支出"
+                basePath={basePath}
+                current={currentSort}
+                align="right"
+              />
+              <TableHead>備註1</TableHead>
+              <TableHead>備註2</TableHead>
+              {editable && <TableHead className="text-right">操作</TableHead>}
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {rows.map((r) => (
+              <TableRow key={r.id}>
                 {editable && (
-                  <Th className="w-10">
+                  <TableCell>
                     <input
                       type="checkbox"
-                      checked={selected.size === rows.length && rows.length > 0}
-                      onChange={toggleAll}
+                      checked={selected.has(r.id)}
+                      onChange={() => toggleOne(r.id)}
                       className="w-4 h-4 accent-brand"
-                      aria-label="全選"
+                      aria-label="選擇此列"
                     />
-                  </Th>
+                  </TableCell>
                 )}
-                <SortableTh
-                  field="date"
-                  label="日期"
-                  basePath={basePath}
-                  current={currentSort}
-                />
-                <SortableTh
-                  field="department"
-                  label="部門名稱"
-                  basePath={basePath}
-                  current={currentSort}
-                />
-                <SortableTh
-                  field="car"
-                  label="車號/人名"
-                  basePath={basePath}
-                  current={currentSort}
-                />
-                <Th>項目</Th>
-                <SortableTh
-                  field="income"
-                  label="收入"
-                  basePath={basePath}
-                  current={currentSort}
-                  align="right"
-                />
-                <SortableTh
-                  field="expense"
-                  label="支出"
-                  basePath={basePath}
-                  current={currentSort}
-                  align="right"
-                />
-                <Th>備註1</Th>
-                <Th>備註2</Th>
-                {editable && <Th align="right">操作</Th>}
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-slate-100">
-              {rows.map((r, i) => (
-                <tr
-                  key={r.id}
-                  className={cn(
-                    "hover:bg-slate-50",
-                    i % 2 === 1 && "bg-slate-50/50",
-                  )}
-                >
-                  {editable && (
-                    <Td>
-                      <input
-                        type="checkbox"
-                        checked={selected.has(r.id)}
-                        onChange={() => toggleOne(r.id)}
-                        className="w-4 h-4 accent-brand"
-                        aria-label="選擇此列"
-                      />
-                    </Td>
-                  )}
-                  <Td className="whitespace-nowrap font-medium">
-                    {r.entryDate}
-                  </Td>
-                  <Td className="font-medium text-slate-700">
-                    {r.departmentName ?? "—"}
-                  </Td>
-                  <Td>{r.carOrPerson ?? "—"}</Td>
-                  <Td>{r.item}</Td>
-                  <Td
-                    align="right"
-                    className="font-bold text-positive tabular-nums"
-                  >
-                    {r.income > 0 ? formatCurrency(r.income) : "—"}
-                  </Td>
-                  <Td
-                    align="right"
-                    className="font-bold text-money tabular-nums"
-                  >
-                    {r.expense > 0 ? formatCurrency(r.expense) : "—"}
-                  </Td>
-                  <Td className="max-w-[160px] truncate text-slate-600">
-                    {r.note1 ?? "—"}
-                  </Td>
-                  <Td className="max-w-[160px] truncate text-slate-600">
-                    {r.note2 ?? "—"}
-                  </Td>
-                  {editable && (
-                    <Td align="right" className="whitespace-nowrap">
-                      <button
-                        type="button"
-                        onClick={() => setEditing(r)}
-                        className="inline-flex items-center gap-1 text-brand-dark hover:text-brand font-semibold mr-3"
-                      >
-                        <Pencil className="w-4 h-4" />
-                        編輯
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => onDeleteOne(r.id)}
-                        disabled={pending}
-                        className="inline-flex items-center gap-1 text-red-600 hover:text-red-700 font-semibold"
-                      >
-                        <Trash2 className="w-4 h-4" />
-                        刪除
-                      </button>
-                    </Td>
-                  )}
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+                <TableCell className="font-medium">{r.entryDate}</TableCell>
+                <TableCell className="font-medium text-slate-700">
+                  {r.departmentName ?? "—"}
+                </TableCell>
+                <TableCell>{r.carOrPerson ?? "—"}</TableCell>
+                <TableCell>{r.item}</TableCell>
+                <TableCell className="text-right font-bold text-positive tabular-nums">
+                  {r.income > 0 ? formatCurrency(r.income) : "—"}
+                </TableCell>
+                <TableCell className="text-right font-bold text-money tabular-nums">
+                  {r.expense > 0 ? formatCurrency(r.expense) : "—"}
+                </TableCell>
+                <TableCell className="max-w-[160px] truncate text-slate-600">
+                  {r.note1 ?? "—"}
+                </TableCell>
+                <TableCell className="max-w-[160px] truncate text-slate-600">
+                  {r.note2 ?? "—"}
+                </TableCell>
+                {editable && (
+                  <TableCell className="text-right">
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => setEditing(r)}
+                      className="text-brand-dark hover:text-brand"
+                    >
+                      編輯
+                    </Button>
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => onDeleteOne(r.id)}
+                      disabled={pending}
+                      className="text-money hover:text-money"
+                    >
+                      刪除
+                    </Button>
+                  </TableCell>
+                )}
+              </TableRow>
+            ))}
+          </TableBody>
+        </Table>
       </div>
 
       {/* 手機卡片 */}
@@ -225,7 +226,7 @@ export function LedgerTable({
         {rows.map((r) => (
           <article
             key={r.id}
-            className="bg-white border border-slate-200 rounded-2xl p-4 space-y-2"
+            className="bg-surface rounded-card border border-hairline shadow-premium-sm p-4 space-y-2"
           >
             <header className="flex items-start justify-between gap-2">
               <div>
@@ -235,23 +236,27 @@ export function LedgerTable({
                 </p>
               </div>
               {editable && (
-                <div className="flex items-center gap-2 shrink-0">
-                  <button
+                <div className="flex items-center gap-1 shrink-0">
+                  <Button
                     type="button"
+                    variant="ghost"
+                    size="icon"
                     onClick={() => setEditing(r)}
                     className="text-brand-dark"
                     aria-label="編輯"
                   >
-                    <Pencil className="w-4 h-4" />
-                  </button>
-                  <button
+                    <Pencil />
+                  </Button>
+                  <Button
                     type="button"
+                    variant="ghost"
+                    size="icon"
                     onClick={() => onDeleteOne(r.id)}
-                    className="text-red-600"
+                    className="text-money"
                     aria-label="刪除"
                   >
-                    <Trash2 className="w-4 h-4" />
-                  </button>
+                    <Trash2 />
+                  </Button>
                 </div>
               )}
             </header>
@@ -269,7 +274,7 @@ export function LedgerTable({
               />
             </dl>
             {(r.note1 || r.note2) && (
-              <p className="text-xs text-slate-500 border-t border-slate-100 pt-2">
+              <p className="text-xs text-slate-500 border-t border-hairline pt-2">
                 {[r.note1, r.note2].filter(Boolean).join(" / ")}
               </p>
             )}
@@ -277,11 +282,15 @@ export function LedgerTable({
         ))}
       </div>
 
-      {editing && (
+      {editable && (
         <LedgerEntryModal
-          entry={editing}
+          key={editing?.id ?? "none"}
+          entry={editing ?? undefined}
           departments={departments}
-          onClose={() => setEditing(null)}
+          open={editing !== null}
+          setOpen={(v) => {
+            if (!v) setEditing(null);
+          }}
         />
       )}
     </>
@@ -331,69 +340,14 @@ function SortableTh({
   const nextSort = isDesc ? ascKey : descKey;
 
   return (
-    <th
-      className={cn(
-        "px-3 py-3 text-xs font-bold uppercase whitespace-nowrap",
-        align === "right" ? "text-right" : "text-left",
-      )}
-    >
+    <TableHead className={cn(align === "right" && "text-right")}>
       <Link
         href={`${basePath}?sort=${nextSort}`}
         className="inline-flex items-center gap-1 hover:text-slate-900"
       >
         {label}
-        {isAsc ? (
-          <ArrowUp className="w-3 h-3" />
-        ) : isDesc ? (
-          <ArrowDown className="w-3 h-3" />
-        ) : (
-          <ArrowUpDown className="w-3 h-3 opacity-40" />
-        )}
+        {isAsc ? "（升冪）" : isDesc ? "（降冪）" : null}
       </Link>
-    </th>
-  );
-}
-
-function Th({
-  children,
-  align = "left",
-  className = "",
-}: {
-  children: React.ReactNode;
-  align?: "left" | "right";
-  className?: string;
-}) {
-  return (
-    <th
-      className={cn(
-        "px-3 py-3 text-xs font-bold uppercase whitespace-nowrap",
-        align === "right" ? "text-right" : "text-left",
-        className,
-      )}
-    >
-      {children}
-    </th>
-  );
-}
-
-function Td({
-  children,
-  className = "",
-  align = "left",
-}: {
-  children: React.ReactNode;
-  className?: string;
-  align?: "left" | "right";
-}) {
-  return (
-    <td
-      className={cn(
-        "px-3 py-2.5",
-        align === "right" ? "text-right" : "text-left",
-        className,
-      )}
-    >
-      {children}
-    </td>
+    </TableHead>
   );
 }

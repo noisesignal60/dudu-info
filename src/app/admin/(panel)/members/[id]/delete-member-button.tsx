@@ -1,8 +1,18 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import { Trash2, X } from "lucide-react";
 import { deleteMemberAction } from "@/actions/admin-members";
+import { Button } from "@/ui/button";
+import { Input } from "@/ui/input";
+import { Label } from "@/ui/label";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogFooter,
+  DialogTitle,
+  DialogDescription,
+} from "@/ui/dialog";
 
 export function DeleteMemberButton({
   memberId,
@@ -18,75 +28,57 @@ export function DeleteMemberButton({
 
   return (
     <>
-      <button
-        type="button"
-        onClick={() => setOpen(true)}
-        className="btn-danger !min-h-10 !text-sm"
-      >
-        <Trash2 className="w-4 h-4" />
+      <Button variant="danger" size="sm" onClick={() => setOpen(true)}>
         刪除會員
-      </button>
+      </Button>
 
-      {open && (
-        <div
-          className="fixed inset-0 z-50 bg-black/50 grid place-items-center p-4"
-          onClick={() => setOpen(false)}
-        >
-          <div
-            className="bg-white rounded-2xl shadow-2xl w-full max-w-md p-6"
-            onClick={(e) => e.stopPropagation()}
-          >
-            <div className="flex items-start justify-between">
-              <h3 className="text-lg font-bold text-slate-900">確認刪除會員</h3>
-              <button onClick={() => setOpen(false)} aria-label="關閉" className="p-1">
-                <X className="w-5 h-5 text-slate-500" />
-              </button>
-            </div>
-            <p className="mt-3 text-slate-700">
-              這個動作會永久刪除 <strong>{name || "此會員"}</strong>{" "}
-              的所有資料，包括交易紀錄、提領申請與餘額。
-              <br />
-              <span className="text-money font-semibold">此動作無法復原。</span>
-            </p>
-            <p className="mt-4 text-sm text-slate-600">
-              請輸入「<span className="font-bold">DELETE</span>」以確認：
-            </p>
-            <input
+      <Dialog open={open} onOpenChange={setOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>刪除會員</DialogTitle>
+            <DialogDescription>
+              這個動作會永久刪除 {name || "此會員"} 的所有資料，包括交易紀錄、提領申請與餘額。此操作無法復原。
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-2">
+            <Label htmlFor="delete-confirm">
+              請輸入「DELETE」以確認：
+            </Label>
+            <Input
+              id="delete-confirm"
               value={confirmText}
               onChange={(e) => setConfirmText(e.target.value)}
-              className="input-base mt-2 !min-h-10 !text-sm"
+              inputSize="sm"
               placeholder="DELETE"
             />
-            {error && <p className="mt-2 text-sm text-money">{error}</p>}
-            <div className="flex justify-end gap-2 mt-5">
-              <button
-                type="button"
-                onClick={() => setOpen(false)}
-                className="btn-secondary !min-h-10 !text-sm"
-              >
-                取消
-              </button>
-              <button
-                type="button"
-                disabled={confirmText !== "DELETE" || isPending}
-                onClick={() => {
-                  setError(null);
-                  startTransition(async () => {
-                    try {
-                      await deleteMemberAction(memberId);
-                    } catch (e) {
-                      setError(e instanceof Error ? e.message : "刪除失敗");
-                    }
-                  });
-                }}
-                className="btn-danger !min-h-10 !text-sm disabled:opacity-50"
-              >
-                {isPending ? "刪除中…" : "確認刪除"}
-              </button>
-            </div>
+            {error && <p className="text-sm text-money font-medium">{error}</p>}
           </div>
-        </div>
-      )}
+
+          <DialogFooter>
+            <Button variant="secondary" size="sm" onClick={() => setOpen(false)}>
+              取消
+            </Button>
+            <Button
+              variant="danger"
+              size="sm"
+              disabled={confirmText !== "DELETE" || isPending}
+              onClick={() => {
+                setError(null);
+                startTransition(async () => {
+                  try {
+                    await deleteMemberAction(memberId);
+                  } catch (e) {
+                    setError(e instanceof Error ? e.message : "刪除失敗");
+                  }
+                });
+              }}
+            >
+              {isPending ? "刪除中…" : "確定刪除"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </>
   );
 }

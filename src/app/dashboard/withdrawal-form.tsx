@@ -1,21 +1,33 @@
 "use client";
 
-import { useActionState, useState } from "react";
+import { useActionState, useState, useEffect } from "react";
+import { toast } from "sonner";
 import { requestWithdrawalAction, type WithdrawalState } from "@/actions/withdrawal";
+import { Button } from "@/ui/button";
+import { Input } from "@/ui/input";
+import { Textarea } from "@/ui/textarea";
+import { Label } from "@/ui/label";
+import { Alert } from "@/ui/alert";
 
 const initial: WithdrawalState = { ok: false };
 
 export function WithdrawalForm({ available }: { available: number }) {
   const [state, action, pending] = useActionState(requestWithdrawalAction, initial);
   const [amount, setAmount] = useState("");
-  // 用 React 官方「同步 prop」pattern：當 state.ok 變 true 時清空 amount
-  const [seenSuccess, setSeenSuccess] = useState(false);
-  if (state.ok && !seenSuccess) {
-    setSeenSuccess(true);
+  const [acked, setAcked] = useState(false);
+
+  // render 期間派生：成功後清空金額（React 允許的條件 setState；收斂後停止）
+  if (state.ok && !acked) {
+    setAcked(true);
     setAmount("");
-  } else if (!state.ok && seenSuccess) {
-    setSeenSuccess(false);
+  } else if (!state.ok && acked) {
+    setAcked(false);
   }
+
+  // 副作用：成功通知（effect 內不呼叫 setState）
+  useEffect(() => {
+    if (state.ok) toast.success(state.message ?? "提領申請已送出");
+  }, [state]);
 
   function err(k: string) {
     return state.ok === false ? state.fieldErrors?.[k] : undefined;
@@ -23,60 +35,52 @@ export function WithdrawalForm({ available }: { available: number }) {
 
   return (
     <form action={action} className="space-y-4">
-      {state.ok === true && (
-        <div className="rounded-xl bg-brand-soft border border-brand/30 text-brand-dark p-4 font-medium">
-          ✓ {state.message}
-        </div>
-      )}
       {state.ok === false && state.error && (
-        <div className="rounded-xl bg-red-50 border border-red-200 text-red-700 p-4">
-          {state.error}
-        </div>
+        <Alert variant="danger">{state.error}</Alert>
       )}
 
       <Field label="提領金額" required hint="最低提領金額：$100" error={err("amount")}>
         <div className="relative">
-          <span className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-500 font-bold">
+          <span className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-500 font-bold pointer-events-none">
             $
           </span>
-          <input
+          <Input
             name="amount"
             required
-            type="number"
-            min={100}
-            max={available}
+            type="text"
             inputMode="numeric"
-            className="input-base pl-8 text-xl font-bold"
+            inputSize="touch"
+            className="pl-8"
             placeholder="100"
             value={amount}
-            onChange={(e) => setAmount(e.target.value)}
+            aria-invalid={!!err("amount")}
+            onChange={(e) => setAmount(e.target.value.replace(/\D/g, ""))}
           />
         </div>
       </Field>
 
       <Field label="銀行代碼（選填）">
-        <input name="bankCode" className="input-base" placeholder="使用註冊時填寫的銀行" />
+        <Input name="bankCode" inputSize="touch" placeholder="使用註冊時填寫的銀行" />
       </Field>
 
       <Field label="銀行帳號（選填）" hint="不填則使用註冊時填寫的帳號">
-        <input name="bankAccount" inputMode="numeric" className="input-base" />
+        <Input name="bankAccount" inputMode="numeric" inputSize="touch" />
       </Field>
 
       <Field label="備註（選填）">
-        <textarea name="note" className="input-base min-h-[3rem] py-3" rows={2} />
+        <Textarea name="note" rows={2} />
       </Field>
 
-      <button
+      <Button
         type="submit"
-        className="btn-primary w-full text-xl"
+        size="touch"
+        className="w-full text-xl"
         disabled={pending || available < 100}
       >
         {pending ? "送出中…" : "提交申請"}
-      </button>
+      </Button>
       {available < 100 && (
-        <p className="text-sm text-slate-500 text-center">
-          可提領金額未達 $100
-        </p>
+        <p className="text-sm text-slate-500 text-center">可提領金額未達 $100</p>
       )}
     </form>
   );
@@ -96,15 +100,15 @@ function Field({
   children: React.ReactNode;
 }) {
   return (
-    <div>
-      <label className="block mb-2 font-semibold text-slate-800">
+    <div className="space-y-2">
+      <Label>
         {label}
-        {required && <span className="text-money ml-1">*</span>}
-      </label>
+        {required && <span className="text-money">*</span>}
+      </Label>
       {children}
-      {hint && !error && <p className="mt-1.5 text-sm text-slate-500">{hint}</p>}
+      {hint && !error && <p className="text-sm text-slate-500">{hint}</p>}
       {error && (
-        <p className="mt-1.5 text-sm text-money font-medium" role="alert">
+        <p className="text-sm text-money font-medium" role="alert">
           {error}
         </p>
       )}

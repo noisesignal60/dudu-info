@@ -2,6 +2,10 @@
 
 import { useActionState } from "react";
 import { adminLoginAction, type AdminLoginState } from "@/actions/admin-auth";
+import { Button } from "@/ui/button";
+import { Input } from "@/ui/input";
+import { Label } from "@/ui/label";
+import { Alert } from "@/ui/alert";
 
 const initial: AdminLoginState = { ok: false };
 
@@ -15,48 +19,39 @@ export function AdminLoginForm() {
   return (
     <form action={action} className="space-y-4">
       {state.ok === false && state.error && (
-        <div className="rounded-xl bg-red-50 border border-red-200 text-red-700 p-3 text-sm">
-          {state.error}
-        </div>
+        <Alert variant="danger">{state.error}</Alert>
       )}
 
-      <div>
-        <label className="block mb-2 font-semibold text-slate-800">帳號</label>
-        <input
+      <div className="space-y-2">
+        <Label htmlFor="username">帳號</Label>
+        <Input
+          id="username"
           name="username"
           required
           autoFocus
           autoComplete="username"
-          className="input-base"
           placeholder="admin"
+          aria-invalid={!!err("username")}
         />
-        {err("username") && (
-          <p className="mt-1 text-sm text-money">{err("username")}</p>
-        )}
+        {err("username") && <p className="text-sm text-money">{err("username")}</p>}
       </div>
 
-      <div>
-        <label className="block mb-2 font-semibold text-slate-800">密碼</label>
-        <input
+      <div className="space-y-2">
+        <Label htmlFor="password">密碼</Label>
+        <Input
+          id="password"
           name="password"
           required
           type="password"
           autoComplete="current-password"
-          className="input-base"
+          aria-invalid={!!err("password")}
         />
-        {err("password") && (
-          <p className="mt-1 text-sm text-money">{err("password")}</p>
-        )}
+        {err("password") && <p className="text-sm text-money">{err("password")}</p>}
       </div>
 
-      <button
-        type="submit"
-        disabled={pending}
-        className="w-full bg-slate-900 hover:bg-slate-800 text-white font-bold py-3 rounded-xl
-                   transition disabled:opacity-50 mt-2"
-      >
+      <Button type="submit" disabled={pending} className="w-full mt-2">
         {pending ? "登入中…" : "登入"}
-      </button>
+      </Button>
     </form>
   );
 }

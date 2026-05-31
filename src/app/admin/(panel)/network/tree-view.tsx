@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useRef, useState, useSyncExternalStore } from "react";
 import Link from "next/link";
-import { LayoutGrid, ListTree, ZoomIn, ZoomOut } from "lucide-react";
+import { ZoomIn, ZoomOut } from "lucide-react";
 import type { TreeNode } from "@/data/admin/network";
 import { cn } from "@/lib/utils";
 
@@ -49,46 +49,44 @@ export function NetworkTreeView({
 
   if (roots.length === 0) {
     return (
-      <div className="bg-white border border-slate-200 rounded-2xl py-16 text-center text-slate-500">
+      <div className="bg-surface border border-hairline rounded-card py-16 text-center text-slate-500">
         尚無會員資料
       </div>
     );
   }
 
   return (
-    <div className="bg-white border border-slate-200 rounded-2xl overflow-hidden">
-      <div className="px-5 py-3 border-b border-slate-100 flex items-center justify-between">
+    <div className="bg-surface border border-hairline rounded-card overflow-hidden">
+      <div className="px-5 py-3 border-b border-hairline flex items-center justify-between">
         <span className="text-sm text-slate-600">
-          共 <strong className="text-slate-900">{totalMembers}</strong> 位會員
+          共 <strong className="text-ink">{totalMembers}</strong> 位會員
           {roots.length > 1 && (
             <> · {roots.length} 個獨立節點</>
           )}
         </span>
-        <div className="inline-flex border border-slate-200 rounded-xl overflow-hidden">
+        <div className="inline-flex border border-hairline rounded-xl overflow-hidden">
           <button
             type="button"
             onClick={() => setMode("tree")}
             className={cn(
-              "px-3 py-2 text-sm font-medium inline-flex items-center gap-1",
+              "px-3 py-2 text-sm font-medium",
               mode === "tree"
-                ? "bg-brand text-white"
-                : "bg-white text-slate-700 hover:bg-slate-50",
+                ? "bg-primary text-primary-foreground"
+                : "bg-surface text-ink hover:bg-secondary",
             )}
           >
-            <LayoutGrid className="w-4 h-4" />
             樹狀
           </button>
           <button
             type="button"
             onClick={() => setMode("list")}
             className={cn(
-              "px-3 py-2 text-sm font-medium inline-flex items-center gap-1",
+              "px-3 py-2 text-sm font-medium",
               mode === "list"
-                ? "bg-brand text-white"
-                : "bg-white text-slate-700 hover:bg-slate-50",
+                ? "bg-primary text-primary-foreground"
+                : "bg-surface text-ink hover:bg-secondary",
             )}
           >
-            <ListTree className="w-4 h-4" />
             縮排列表
           </button>
         </div>
@@ -126,7 +124,7 @@ function D3TreeView({ data }: { data: TreeNode }) {
   return (
     <div
       ref={containerRef}
-      className="relative bg-slate-50"
+      className="relative bg-background"
       style={{ height: "calc(100vh - 280px)", minHeight: 500 }}
     >
       {!Tree && (
@@ -149,11 +147,11 @@ function D3TreeView({ data }: { data: TreeNode }) {
           )}
         />
       )}
-      <div className="absolute right-4 top-4 flex flex-col gap-1 bg-white rounded-xl border border-slate-200 shadow p-1">
+      <div className="absolute right-4 top-4 flex flex-col gap-1 bg-surface rounded-xl border border-hairline shadow-premium-sm p-1">
         <button
           type="button"
           onClick={() => setZoom((z) => Math.min(2, z + 0.1))}
-          className="p-2 hover:bg-slate-100 rounded-lg"
+          className="p-2 hover:bg-secondary rounded-lg"
           aria-label="放大"
         >
           <ZoomIn className="w-4 h-4" />
@@ -161,7 +159,7 @@ function D3TreeView({ data }: { data: TreeNode }) {
         <button
           type="button"
           onClick={() => setZoom((z) => Math.max(0.3, z - 0.1))}
-          className="p-2 hover:bg-slate-100 rounded-lg"
+          className="p-2 hover:bg-secondary rounded-lg"
           aria-label="縮小"
         >
           <ZoomOut className="w-4 h-4" />
@@ -185,9 +183,9 @@ function NodeCard({ nodeDatum }: { nodeDatum: TreeNode }) {
             href={`/admin/members/${nodeDatum.id}`}
             target="_blank"
             rel="noopener noreferrer"
-            className="block w-full h-full bg-white border-2 border-brand rounded-xl px-3 py-2 hover:shadow-md transition no-underline"
+            className="block w-full h-full bg-surface border-2 border-brand rounded-xl px-3 py-2 hover:shadow-premium-sm transition no-underline"
           >
-            <div className="text-sm font-bold text-slate-900 truncate">
+            <div className="text-sm font-bold text-ink truncate">
               {nodeDatum.name}
             </div>
             {nodeDatum.attributes?.referralCode && (
@@ -233,7 +231,7 @@ function IndentedNode({ node, depth }: { node: TreeNode; depth: number }) {
 
   return (
     <details open className="ml-0" style={{ marginLeft: depth * 16 }}>
-      <summary className="cursor-pointer list-none py-1.5 flex items-center gap-2 hover:bg-slate-50 rounded-lg px-2">
+      <summary className="cursor-pointer list-none py-1.5 flex items-center gap-2 hover:bg-background rounded-lg px-2">
         {hasChildren ? (
           <span className="text-slate-400 group-open:rotate-90 transition-transform">
             ▶
@@ -243,7 +241,7 @@ function IndentedNode({ node, depth }: { node: TreeNode; depth: number }) {
         )}
         <Link
           href={`/admin/members/${node.id}`}
-          className="font-medium text-slate-900 hover:text-brand-dark"
+          className="font-medium text-ink hover:text-brand-dark"
         >
           {node.name}
         </Link>
@@ -259,7 +257,7 @@ function IndentedNode({ node, depth }: { node: TreeNode; depth: number }) {
         )}
       </summary>
       {hasChildren && (
-        <div className="border-l-2 border-slate-200 ml-2">
+        <div className="border-l-2 border-hairline ml-2">
           {node.children.map((c) => (
             <IndentedNode key={c.id} node={c} depth={depth + 1} />
           ))}

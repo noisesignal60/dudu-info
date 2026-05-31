@@ -8,6 +8,17 @@ import {
 import { getPassbookSignedUrl } from "@/data/admin/members";
 import { formatCurrency, formatDateTime, cn } from "@/lib/utils";
 import { ReviewButton } from "./review-button";
+import { Badge } from "@/ui/badge";
+import {
+  Table,
+  TableHeader,
+  TableBody,
+  TableRow,
+  TableHead,
+  TableCell,
+} from "@/ui/table";
+import { EmptyState } from "@/ui/empty-state";
+import { Skeleton } from "@/ui/skeleton";
 
 export const metadata = { title: "提領申請 ｜ 後台" };
 
@@ -28,9 +39,9 @@ export default function AdminWithdrawalsPage({
   searchParams: SearchParams;
 }) {
   return (
-    <div className="space-y-5">
+    <div className="space-y-6">
       <div>
-        <h1 className="text-2xl font-black text-slate-900">提領申請</h1>
+        <h1 className="font-serif text-2xl font-black text-ink">提領申請</h1>
         <p className="text-slate-500 mt-1 text-sm">
           審核會員的提領申請；通過後系統會自動更新餘額並寫入交易紀錄
         </p>
@@ -55,7 +66,7 @@ async function Tabs({ searchParams }: { searchParams: SearchParams }) {
   const counts = await countWithdrawalsByStatus();
 
   return (
-    <nav className="bg-white rounded-2xl border border-slate-200 p-2 inline-flex gap-1">
+    <nav className="bg-surface rounded-card border border-hairline shadow-premium-sm p-2 inline-flex gap-1">
       {TABS.map((t) => {
         const n = counts[t.key];
         const isActive = t.key === active;
@@ -64,10 +75,10 @@ async function Tabs({ searchParams }: { searchParams: SearchParams }) {
             key={t.key}
             href={`/admin/withdrawals?status=${t.key}`}
             className={cn(
-              "px-4 py-2 rounded-xl font-medium text-sm inline-flex items-center gap-2",
+              "px-4 py-2 rounded-sm font-medium text-sm inline-flex items-center gap-2",
               isActive
-                ? "bg-brand text-white"
-                : "text-slate-700 hover:bg-slate-100",
+                ? "bg-primary text-primary-foreground"
+                : "text-slate-600 hover:bg-secondary",
             )}
           >
             {t.label}
@@ -77,7 +88,7 @@ async function Tabs({ searchParams }: { searchParams: SearchParams }) {
                 isActive
                   ? "bg-white/25 text-white"
                   : t.key === "pending" && n > 0
-                    ? "bg-red-500 text-white"
+                    ? "bg-destructive text-white"
                     : "bg-slate-200 text-slate-700",
               )}
             >
@@ -100,73 +111,73 @@ async function Listing({ searchParams }: { searchParams: SearchParams }) {
 
   if (rows.length === 0) {
     return (
-      <div className="bg-white rounded-2xl border border-slate-200 py-16 text-center text-slate-500">
-        <p>沒有符合條件的提領申請</p>
+      <div className="rounded-card border border-hairline overflow-hidden">
+        <EmptyState title="沒有符合條件的提領申請" />
       </div>
     );
   }
 
   return (
-    <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
-      <div className="px-5 py-3 border-b border-slate-100 text-sm text-slate-600">
-        共 <span className="font-bold text-slate-900">{total}</span> 筆 ・
+    <div className="space-y-3">
+      <div className="text-sm text-slate-600">
+        共 <span className="font-bold text-ink">{total}</span> 筆 ・
         本頁 {rows.length}/{pageSize}
       </div>
-      <div className="overflow-x-auto">
-        <table className="w-full text-sm">
-          <thead className="bg-slate-50 text-slate-600">
-            <tr className="text-left">
-              <Th>申請時間</Th>
-              <Th>用戶</Th>
-              <Th align="right">提領金額</Th>
-              <Th>銀行</Th>
-              <Th>帳號</Th>
-              <Th>備註</Th>
-              <Th>狀態</Th>
-              <Th>處理時間</Th>
-              <Th align="right">操作</Th>
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-slate-100">
+      <div className="rounded-card border border-hairline overflow-hidden">
+        <Table>
+          <TableHeader>
+            <TableRow>
+              <TableHead>申請時間</TableHead>
+              <TableHead>用戶</TableHead>
+              <TableHead className="text-right">提領金額</TableHead>
+              <TableHead>銀行</TableHead>
+              <TableHead>帳號</TableHead>
+              <TableHead>備註</TableHead>
+              <TableHead>狀態</TableHead>
+              <TableHead>處理時間</TableHead>
+              <TableHead className="text-right">操作</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
             {rows.map(async (w) => {
               const signedUrl = w.memberPassbookUrl
                 ? await getPassbookSignedUrl(w.memberPassbookUrl)
                 : null;
               return (
-                <tr key={w.id} className="hover:bg-slate-50">
-                  <Td className="text-xs text-slate-500 whitespace-nowrap">
+                <TableRow key={w.id}>
+                  <TableCell className="text-xs text-slate-500 whitespace-nowrap">
                     {formatDateTime(w.createdAt)}
-                  </Td>
-                  <Td>
+                  </TableCell>
+                  <TableCell>
                     <Link
                       href={`/admin/members/${w.memberId}`}
-                      className="font-medium text-slate-900 hover:text-brand-dark"
+                      className="font-medium text-ink hover:text-brand-dark"
                     >
                       {w.memberName ?? w.memberLineDisplay ?? "—"}
                     </Link>
-                  </Td>
-                  <Td align="right" className="font-bold text-money tabular-nums">
+                  </TableCell>
+                  <TableCell className="text-right font-bold text-money tabular-nums">
                     {formatCurrency(w.amount)}
-                  </Td>
-                  <Td>{w.bankCode ?? "—"}</Td>
-                  <Td>{w.bankAccount ?? "—"}</Td>
-                  <Td className="max-w-[200px] truncate text-slate-600">
+                  </TableCell>
+                  <TableCell>{w.bankCode ?? "—"}</TableCell>
+                  <TableCell>{w.bankAccount ?? "—"}</TableCell>
+                  <TableCell className="max-w-[200px] truncate text-slate-600">
                     {w.note ?? "—"}
-                  </Td>
-                  <Td>
+                  </TableCell>
+                  <TableCell>
                     <StatusBadge status={w.status} />
-                  </Td>
-                  <Td className="text-xs text-slate-500 whitespace-nowrap">
+                  </TableCell>
+                  <TableCell className="text-xs text-slate-500 whitespace-nowrap">
                     {w.processedAt ? formatDateTime(w.processedAt) : "—"}
-                  </Td>
-                  <Td align="right">
+                  </TableCell>
+                  <TableCell className="text-right">
                     <ReviewButton withdrawal={w} passbookUrl={signedUrl} />
-                  </Td>
-                </tr>
+                  </TableCell>
+                </TableRow>
               );
             })}
-          </tbody>
-        </table>
+          </TableBody>
+        </Table>
       </div>
     </div>
   );
@@ -174,68 +185,26 @@ async function Listing({ searchParams }: { searchParams: SearchParams }) {
 
 function StatusBadge({ status }: { status: WithdrawalStatus }) {
   const map = {
-    pending: { label: "待審核", cls: "bg-amber-100 text-amber-700" },
-    approved: { label: "已通過", cls: "bg-green-100 text-green-700" },
-    rejected: { label: "已拒絕", cls: "bg-red-100 text-red-700" },
+    pending: "待審核",
+    approved: "已通過",
+    rejected: "已拒絕",
   } as const;
-  const c = map[status];
   return (
-    <span
-      className={cn(
-        "inline-flex items-center px-2 py-0.5 rounded-full text-xs font-bold",
-        c.cls,
-      )}
-    >
-      {c.label}
-    </span>
-  );
-}
-
-function Th({
-  children,
-  align = "left",
-}: {
-  children: React.ReactNode;
-  align?: "left" | "right";
-}) {
-  return (
-    <th
-      className={`px-3 py-3 text-xs font-bold uppercase whitespace-nowrap ${
-        align === "right" ? "text-right" : "text-left"
-      }`}
-    >
-      {children}
-    </th>
-  );
-}
-
-function Td({
-  children,
-  className = "",
-  align = "left",
-}: {
-  children: React.ReactNode;
-  className?: string;
-  align?: "left" | "right";
-}) {
-  return (
-    <td
-      className={`px-3 py-3 ${align === "right" ? "text-right" : "text-left"} ${className}`}
-    >
-      {children}
-    </td>
+    <Badge variant={status} size="sm">
+      {map[status]}
+    </Badge>
   );
 }
 
 function TabsSkeleton() {
-  return <div className="h-12 w-96 bg-slate-200 rounded-2xl animate-pulse" />;
+  return <Skeleton className="h-12 w-96 rounded-card" />;
 }
 
 function TableSkeleton() {
   return (
-    <div className="bg-white rounded-2xl border border-slate-200 p-8 space-y-3">
+    <div className="bg-surface rounded-card border border-hairline shadow-premium-sm p-8 space-y-3">
       {Array.from({ length: 6 }).map((_, i) => (
-        <div key={i} className="h-10 bg-slate-100 rounded animate-pulse" />
+        <Skeleton key={i} className="h-10 rounded" />
       ))}
     </div>
   );

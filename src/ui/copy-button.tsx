@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Copy, Check } from "lucide-react";
+import { Button } from "@/ui/button";
 
 export function CopyButton({ text, label = "複製" }: { text: string; label?: string }) {
   const [copied, setCopied] = useState(false);
@@ -17,23 +17,15 @@ export function CopyButton({ text, label = "複製" }: { text: string; label?: s
   }
 
   return (
-    <button
+    <Button
       type="button"
+      variant="secondary"
+      size="touch"
       onClick={handleCopy}
-      className="btn-secondary"
       aria-live="polite"
+      className="w-full"
     >
-      {copied ? (
-        <>
-          <Check className="w-5 h-5 text-brand" />
-          已複製
-        </>
-      ) : (
-        <>
-          <Copy className="w-5 h-5" />
-          {label}
-        </>
-      )}
-    </button>
+      {copied ? "已複製" : label}
+    </Button>
   );
 }

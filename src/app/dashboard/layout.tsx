@@ -2,8 +2,9 @@ import { Suspense } from "react";
 import { auth, signOut } from "@/auth";
 import Image from "next/image";
 import { redirect } from "next/navigation";
-import { FontScaleToggle } from "@/ui/font-scale-toggle";
 import { SupportFab } from "@/ui/support-fab";
+import { Button } from "@/ui/button";
+import { Skeleton } from "@/ui/skeleton";
 
 export default function DashboardLayout({
   children,
@@ -12,20 +13,14 @@ export default function DashboardLayout({
 }) {
   return (
     <div className="min-h-svh">
-      <header className="sticky top-0 z-30 bg-white/95 backdrop-blur border-b border-slate-200">
+      <header className="sticky top-0 z-30 bg-surface border-b border-hairline shadow-premium-sm">
         <div className="max-w-3xl mx-auto px-4 py-3 flex items-center justify-between gap-3">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-brand text-white font-black text-lg grid place-items-center">
-              嘟
-            </div>
-            <div>
-              <p className="text-xs text-slate-500 leading-none">嘟嘟資訊網</p>
-              <h1 className="font-bold text-slate-900 text-lg">分潤系統</h1>
-            </div>
+          <div>
+            <p className="eyebrow leading-none">嘟嘟資訊網</p>
+            <h1 className="font-serif font-bold text-ink text-lg leading-tight mt-0.5">分潤系統</h1>
           </div>
 
           <div className="flex items-center gap-2">
-            <FontScaleToggle />
             <Suspense fallback={<UserPillSkeleton />}>
               <UserPill />
             </Suspense>
@@ -62,12 +57,14 @@ async function UserPill() {
         />
       )}
       <form action={logout}>
-        <button
+        <Button
           type="submit"
-          className="text-slate-600 hover:text-slate-900 text-sm font-medium px-3 py-2"
+          variant="ghost"
+          size="sm"
+          className="font-medium text-slate-600 hover:text-slate-900"
         >
           登出
-        </button>
+        </Button>
       </form>
     </div>
   );
@@ -76,8 +73,8 @@ async function UserPill() {
 function UserPillSkeleton() {
   return (
     <div className="flex items-center gap-2 pl-2">
-      <div className="w-9 h-9 rounded-full bg-slate-200 animate-pulse" />
-      <div className="w-12 h-4 rounded bg-slate-200 animate-pulse" />
+      <Skeleton className="w-9 h-9 rounded-full" />
+      <Skeleton className="w-12 h-4 rounded" />
     </div>
   );
 }

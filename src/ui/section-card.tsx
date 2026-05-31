@@ -1,36 +1,35 @@
-import { cn } from "@/lib/utils";
 import type { ReactNode } from "react";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/ui/card";
 
+/**
+ * 區塊卡片（對外 API 不變，內部改用統一 Card）。標題比通用 Card 大一級（text-xl）。
+ */
 export function SectionCard({
   title,
   subtitle,
+  eyebrow,
   action,
   children,
   className,
 }: {
   title: string;
   subtitle?: string;
+  eyebrow?: string;
   action?: ReactNode;
   children: ReactNode;
   className?: string;
 }) {
   return (
-    <section
-      className={cn(
-        "bg-white rounded-2xl border border-slate-200 shadow-sm",
-        className,
-      )}
-    >
-      <header className="flex items-start justify-between px-5 pt-5 pb-3 gap-3">
+    <Card className={className}>
+      <CardHeader>
         <div>
-          <h2 className="text-xl font-bold text-slate-900">{title}</h2>
-          {subtitle && (
-            <p className="text-sm text-slate-500 mt-1">{subtitle}</p>
-          )}
+          {eyebrow && <p className="eyebrow mb-1.5">{eyebrow}</p>}
+          <CardTitle className="font-serif text-xl tracking-tight">{title}</CardTitle>
+          {subtitle && <CardDescription className="mt-1.5">{subtitle}</CardDescription>}
         </div>
         {action}
-      </header>
-      <div className="px-5 pb-5">{children}</div>
-    </section>
+      </CardHeader>
+      <CardContent>{children}</CardContent>
+    </Card>
   );
 }

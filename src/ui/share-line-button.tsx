@@ -1,18 +1,14 @@
 "use client";
 
-import { MessageCircle } from "lucide-react";
+import { Button } from "@/ui/button";
 
 export function ShareLineButton({ text }: { text: string }) {
   const url = `https://line.me/R/share?text=${encodeURIComponent(text)}`;
   return (
-    <a
-      href={url}
-      target="_blank"
-      rel="noopener noreferrer"
-      className="btn-primary"
-    >
-      <MessageCircle className="w-5 h-5" />
-      分享到 LINE
-    </a>
+    <Button asChild size="touch" className="w-full">
+      <a href={url} target="_blank" rel="noopener noreferrer">
+        分享到 LINE
+      </a>
+    </Button>
   );
 }

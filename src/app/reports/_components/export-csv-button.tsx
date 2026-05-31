@@ -1,7 +1,7 @@
 "use client";
 
-import { Download } from "lucide-react";
 import { useTransition } from "react";
+import { Button } from "@/ui/button";
 import { exportLedgerCsvAction } from "@/actions/reports-ledger";
 
 export function ExportCsvButton({
@@ -34,14 +34,14 @@ export function ExportCsvButton({
   }
 
   return (
-    <button
+    <Button
       type="button"
+      variant="secondary"
+      size="sm"
       onClick={onClick}
       disabled={pending}
-      className="btn-secondary !min-h-10 !text-sm"
     >
-      <Download className="w-4 h-4" />
       {pending ? "匯出中..." : "匯出 CSV"}
-    </button>
+    </Button>
   );
 }

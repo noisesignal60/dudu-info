@@ -1,5 +1,8 @@
 import type { TransactionDTO } from "@/data/transactions";
 import { formatCurrency, formatDateTime } from "@/lib/utils";
+import { Badge } from "@/ui/badge";
+import { Card } from "@/ui/card";
+import { EmptyState } from "@/ui/empty-state";
 
 const KIND_LABEL: Record<TransactionDTO["kind"], string> = {
   commission: "分潤",
@@ -11,48 +14,47 @@ const KIND_LABEL: Record<TransactionDTO["kind"], string> = {
 export function TransactionList({ items }: { items: TransactionDTO[] }) {
   if (items.length === 0) {
     return (
-      <div className="py-8 text-center text-slate-500">
-        <p className="font-medium">目前沒有交易紀錄</p>
-        <p className="text-sm mt-1">當您有交易時，紀錄將顯示在這裡</p>
-      </div>
+      <EmptyState
+        title="目前沒有交易紀錄"
+        description="當您有交易時，紀錄將顯示在這裡"
+      />
     );
   }
 
   return (
-    <ul className="divide-y divide-slate-100">
+    <ul className="space-y-3">
       {items.map((t) => {
         const positive = t.amount >= 0;
         return (
-          <li
-            key={t.id}
-            className="py-3 flex items-start justify-between gap-3"
-          >
+          <li key={t.id}>
+            <Card className="px-4 py-3.5 flex items-start justify-between gap-3">
             <div className="min-w-0">
               <div className="flex items-center gap-2">
-                <span className="inline-flex items-center px-2 py-0.5 rounded-md bg-slate-100 text-slate-700 text-xs font-medium">
+                <Badge variant={t.kind} size="sm">
                   {KIND_LABEL[t.kind]}
-                </span>
+                </Badge>
                 <p className="font-semibold text-slate-900 truncate">
                   {t.title}
                 </p>
               </div>
               {t.description && (
-                <p className="text-sm text-slate-500 mt-0.5 truncate">
+                <p className="text-sm text-slate-500 mt-1 truncate">
                   {t.description}
                 </p>
               )}
-              <p className="text-xs text-slate-400 mt-1">
+              <p className="text-xs text-slate-400 mt-1.5">
                 {formatDateTime(t.createdAt)}
               </p>
             </div>
             <div
-              className={`shrink-0 text-lg font-bold ${
+              className={`fig shrink-0 text-lg ${
                 positive ? "text-positive" : "text-money"
               }`}
             >
               {positive ? "+" : ""}
               {formatCurrency(t.amount)}
             </div>
+            </Card>
           </li>
         );
       })}

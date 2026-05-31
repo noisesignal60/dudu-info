@@ -49,7 +49,7 @@ There are **two independent session mechanisms** running side by side — do not
 
 ### Styling
 
-Tailwind v4 (`@import "tailwindcss"` + `@theme` block in `globals.css`). Brand color is LINE green `#06C755` exposed as `--color-brand` / `bg-brand`. Base font is enlarged (17px) and there's a user-toggleable `data-font-scale="large|xlarge"` system — the target audience is older taxi drivers. Form controls should keep `min-height: 3rem` and the `btn-primary` / `input-base` utility classes for touch-friendliness.
+Tailwind v4 (`@import "tailwindcss"` + `@theme` block in `globals.css`). Brand color is LINE green `#06C755` exposed as `--color-brand` / `bg-brand`. Base font is set to a single large fixed size (`html { font-size: 34px }` in `globals.css`) — the target audience is older taxi drivers. The former user-toggleable `data-font-scale` (A/A+/A++) system has been removed. Form controls should keep `min-height: 3rem` and the `btn-primary` / `input-base` utility classes for touch-friendliness.
 
 ### Next.js 16 caveats
 

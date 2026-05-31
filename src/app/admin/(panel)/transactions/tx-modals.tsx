@@ -1,7 +1,7 @@
 "use client";
 
-import { useState, useActionState } from "react";
-import { Plus, Banknote, Gift, Pencil, Download } from "lucide-react";
+import { useState, useActionState, useEffect } from "react";
+import { toast } from "sonner";
 import {
   createGeneralTransactionAction,
   manualWithdrawalAction,
@@ -12,6 +12,24 @@ import {
 } from "@/actions/admin-transactions";
 import type { AdminTxRow } from "@/data/admin/transactions";
 import { MemberCombobox } from "./member-combobox";
+import { Button } from "@/ui/button";
+import { Input } from "@/ui/input";
+import { Label } from "@/ui/label";
+import { Alert } from "@/ui/alert";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/ui/select";
+import {
+  Dialog,
+  DialogContent,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/ui/dialog";
 
 const initial: TxFormState = { ok: false };
 
@@ -20,9 +38,9 @@ export function TxToolbar({
 }: {
   filters: { kind?: string; memberId?: string; from?: string; to?: string };
 }) {
-  const [mode, setMode] = useState<"none" | "create" | "withdraw" | "reward">(
-    "none",
-  );
+  const [createOpen, setCreateOpen] = useState(false);
+  const [withdrawOpen, setWithdrawOpen] = useState(false);
+  const [rewardOpen, setRewardOpen] = useState(false);
 
   async function onExport() {
     const res = await exportTransactionsCsvAction(filters);
@@ -40,46 +58,24 @@ export function TxToolbar({
   }
 
   return (
-    <>
-      <div className="flex flex-wrap gap-2">
-        <button
-          type="button"
-          onClick={() => setMode("create")}
-          className="btn-primary !min-h-10 !text-sm"
-        >
-          <Plus className="w-4 h-4" />
-          創建新交易
-        </button>
-        <button
-          type="button"
-          onClick={() => setMode("withdraw")}
-          className="btn-secondary !min-h-10 !text-sm"
-        >
-          <Banknote className="w-4 h-4" />
-          手動提領
-        </button>
-        <button
-          type="button"
-          onClick={() => setMode("reward")}
-          className="btn-secondary !min-h-10 !text-sm"
-        >
-          <Gift className="w-4 h-4" />
-          新帳號獎勵
-        </button>
-        <button
-          type="button"
-          onClick={onExport}
-          className="btn-secondary !min-h-10 !text-sm"
-        >
-          <Download className="w-4 h-4" />
-          匯出 CSV
-        </button>
-      </div>
+    <div className="flex flex-wrap gap-2">
+      <Button size="sm" onClick={() => setCreateOpen(true)}>
+        創建新交易
+      </Button>
+      <Button variant="secondary" size="sm" onClick={() => setWithdrawOpen(true)}>
+        手動提領
+      </Button>
+      <Button variant="secondary" size="sm" onClick={() => setRewardOpen(true)}>
+        新帳號獎勵
+      </Button>
+      <Button variant="secondary" size="sm" onClick={onExport}>
+        匯出 CSV
+      </Button>
 
-      {mode === "create" && <CreateModal onClose={() => setMode("none")} />}
-      {mode === "withdraw" && <WithdrawModal onClose={() => setMode("none")} />}
-      {mode === "reward" && <RewardModal onClose={() => setMode("none")} />}
-    </>
+      <CreateModal open={createOpen} setOpen={setCreateOpen} />
+      <WithdrawModal open={withdrawOpen} setOpen={setWithdrawOpen} />
+      <RewardModal open={rewardOpen} setOpen={setRewardOpen} />
+    </div>
   );
 }
 
@@ -87,181 +83,230 @@ export function EditTxButton({ tx }: { tx: AdminTxRow }) {
   const [open, setOpen] = useState(false);
   return (
     <>
-      <button
-        type="button"
+      <Button
+        variant="ghost"
+        size="sm"
         onClick={() => setOpen(true)}
-        className="inline-flex items-center gap-1 text-brand-dark hover:text-brand font-semibold"
+        className="text-brand-dark hover:text-brand"
       >
-        <Pencil className="w-4 h-4" />
         編輯
-      </button>
-      {open && <EditModal tx={tx} onClose={() => setOpen(false)} />}
+      </Button>
+      <EditModal tx={tx} open={open} setOpen={setOpen} />
     </>
   );
 }
 
-// ──── Modal shells ───────────────────────────────────────────
+// ──── Modals ─────────────────────────────────────────────────
 
-function CreateModal({ onClose }: { onClose: () => void }) {
+function CreateModal({
+  open,
+  setOpen,
+}: {
+  open: boolean;
+  setOpen: (v: boolean) => void;
+}) {
   const [state, action, pending] = useActionState(
     createGeneralTransactionAction,
     initial,
   );
-  if (state.ok) setTimeout(onClose, 700);
+  const [acked, setAcked] = useState(false);
+  if (state.ok && !acked) {
+    setAcked(true);
+    setOpen(false);
+  } else if (!state.ok && acked) {
+    setAcked(false);
+  }
+  useEffect(() => {
+    if (state.ok) toast.success(state.message ?? "完成");
+  }, [state]);
 
   return (
-    <Shell title="創建新交易" onClose={onClose}>
-      <form action={action} className="space-y-4">
-        <MemberCombobox name="memberId" label="主要對象（會員）" required />
-        <FieldError state={state} field="memberId" />
+    <Dialog open={open} onOpenChange={setOpen}>
+      <DialogContent>
+        <DialogHeader>
+          <DialogTitle>創建新交易</DialogTitle>
+        </DialogHeader>
+        <form action={action} className="space-y-4">
+          <MemberCombobox name="memberId" label="主要對象（會員）" required />
+          <FieldError state={state} field="memberId" />
 
-        <Field
-          label="交易總金額 *"
-          name="amount"
-          type="number"
-          step="0.01"
-          placeholder="正數為收入，負數為支出"
-        />
-        <FieldError state={state} field="amount" />
+          <Field
+            label="交易總金額 *"
+            name="amount"
+            type="number"
+            step="0.01"
+            placeholder="正數為收入，負數為支出"
+          />
+          <FieldError state={state} field="amount" />
 
-        <label className="block">
-          <span className="block text-sm font-medium text-slate-700 mb-1">
-            類型
-          </span>
-          <select name="kind" defaultValue="commission" className="input-base">
-            <option value="commission">分潤</option>
-            <option value="adjust">手動調整</option>
-          </select>
-        </label>
+          <div className="space-y-1">
+            <Label>類型</Label>
+            <Select defaultValue="commission" name="kind">
+              <SelectTrigger size="sm">
+                <SelectValue placeholder="選擇類型" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="commission">分潤</SelectItem>
+                <SelectItem value="adjust">手動調整</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
 
-        <Field label="交易描述" name="description" placeholder="選填" />
+          <Field label="交易描述" name="description" placeholder="選填" />
 
-        <FormMsg state={state} />
-        <Footer onClose={onClose} pending={pending} />
-      </form>
-    </Shell>
+          <FormMsg state={state} />
+          <Footer onClose={() => setOpen(false)} pending={pending} />
+        </form>
+      </DialogContent>
+    </Dialog>
   );
 }
 
-function WithdrawModal({ onClose }: { onClose: () => void }) {
+function WithdrawModal({
+  open,
+  setOpen,
+}: {
+  open: boolean;
+  setOpen: (v: boolean) => void;
+}) {
   const [state, action, pending] = useActionState(manualWithdrawalAction, initial);
-  if (state.ok) setTimeout(onClose, 700);
+  const [acked, setAcked] = useState(false);
+  if (state.ok && !acked) {
+    setAcked(true);
+    setOpen(false);
+  } else if (!state.ok && acked) {
+    setAcked(false);
+  }
+  useEffect(() => {
+    if (state.ok) toast.success(state.message ?? "完成");
+  }, [state]);
 
   return (
-    <Shell title="手動提領" onClose={onClose}>
-      <form action={action} className="space-y-4">
-        <MemberCombobox name="memberId" label="選擇用戶" required />
-        <FieldError state={state} field="memberId" />
+    <Dialog open={open} onOpenChange={setOpen}>
+      <DialogContent>
+        <DialogHeader>
+          <DialogTitle>手動提領</DialogTitle>
+        </DialogHeader>
+        <form action={action} className="space-y-4">
+          <MemberCombobox name="memberId" label="選擇用戶" required />
+          <FieldError state={state} field="memberId" />
 
-        <Field
-          label="提領金額 *"
-          name="amount"
-          type="number"
-          step="0.01"
-          placeholder="必須 ≤ 會員的待領取金額"
-        />
-        <FieldError state={state} field="amount" />
+          <Field
+            label="提領金額 *"
+            name="amount"
+            type="number"
+            step="0.01"
+            placeholder="必須 ≤ 會員的待領取金額"
+          />
+          <FieldError state={state} field="amount" />
 
-        <Field label="提領備註" name="note" placeholder="選填" />
+          <Field label="提領備註" name="note" placeholder="選填" />
 
-        <FormMsg state={state} />
-        <Footer onClose={onClose} pending={pending} />
-      </form>
-    </Shell>
+          <FormMsg state={state} />
+          <Footer onClose={() => setOpen(false)} pending={pending} />
+        </form>
+      </DialogContent>
+    </Dialog>
   );
 }
 
-function RewardModal({ onClose }: { onClose: () => void }) {
+function RewardModal({
+  open,
+  setOpen,
+}: {
+  open: boolean;
+  setOpen: (v: boolean) => void;
+}) {
   const [state, action, pending] = useActionState(newMemberRewardAction, initial);
-  if (state.ok) setTimeout(onClose, 700);
+  const [acked, setAcked] = useState(false);
+  if (state.ok && !acked) {
+    setAcked(true);
+    setOpen(false);
+  } else if (!state.ok && acked) {
+    setAcked(false);
+  }
+  useEffect(() => {
+    if (state.ok) toast.success(state.message ?? "完成");
+  }, [state]);
 
   return (
-    <Shell title="新帳號申請通過獎勵" onClose={onClose}>
-      <form action={action} className="space-y-4">
-        <MemberCombobox name="memberId" label="新用戶" required />
-        <FieldError state={state} field="memberId" />
+    <Dialog open={open} onOpenChange={setOpen}>
+      <DialogContent>
+        <DialogHeader>
+          <DialogTitle>新帳號申請通過獎勵</DialogTitle>
+        </DialogHeader>
+        <form action={action} className="space-y-4">
+          <MemberCombobox name="memberId" label="新用戶" required />
+          <FieldError state={state} field="memberId" />
 
-        <Field
-          label="獎勵金額 *"
-          name="amount"
-          type="number"
-          step="0.01"
-        />
-        <FieldError state={state} field="amount" />
+          <Field label="獎勵金額 *" name="amount" type="number" step="0.01" />
+          <FieldError state={state} field="amount" />
 
-        <Field label="獎勵描述" name="description" placeholder="選填" />
+          <Field label="獎勵描述" name="description" placeholder="選填" />
 
-        <FormMsg state={state} />
-        <Footer onClose={onClose} pending={pending} />
-      </form>
-    </Shell>
+          <FormMsg state={state} />
+          <Footer onClose={() => setOpen(false)} pending={pending} />
+        </form>
+      </DialogContent>
+    </Dialog>
   );
 }
 
 function EditModal({
   tx,
-  onClose,
+  open,
+  setOpen,
 }: {
   tx: AdminTxRow;
-  onClose: () => void;
+  open: boolean;
+  setOpen: (v: boolean) => void;
 }) {
   const [state, action, pending] = useActionState(
     editTransactionAction.bind(null, tx.id),
     initial,
   );
-  if (state.ok) setTimeout(onClose, 700);
+  const [acked, setAcked] = useState(false);
+  if (state.ok && !acked) {
+    setAcked(true);
+    setOpen(false);
+  } else if (!state.ok && acked) {
+    setAcked(false);
+  }
+  useEffect(() => {
+    if (state.ok) toast.success(state.message ?? "完成");
+  }, [state]);
 
   return (
-    <Shell title={`編輯交易：${tx.title}`} onClose={onClose}>
-      <form action={action} className="space-y-4">
-        <Field
-          label="交易金額 *"
-          name="amount"
-          type="number"
-          step="0.01"
-          defaultValue={String(tx.amount)}
-        />
-        <FieldError state={state} field="amount" />
+    <Dialog open={open} onOpenChange={setOpen}>
+      <DialogContent>
+        <DialogHeader>
+          <DialogTitle>編輯交易：{tx.title}</DialogTitle>
+        </DialogHeader>
+        <form action={action} className="space-y-4">
+          <Field
+            label="交易金額 *"
+            name="amount"
+            type="number"
+            step="0.01"
+            defaultValue={String(tx.amount)}
+          />
+          <FieldError state={state} field="amount" />
 
-        <Field
-          label="交易描述"
-          name="description"
-          defaultValue={tx.description ?? ""}
-        />
+          <Field
+            label="交易描述"
+            name="description"
+            defaultValue={tx.description ?? ""}
+          />
 
-        <FormMsg state={state} />
-        <Footer onClose={onClose} pending={pending} />
-      </form>
-    </Shell>
+          <FormMsg state={state} />
+          <Footer onClose={() => setOpen(false)} pending={pending} />
+        </form>
+      </DialogContent>
+    </Dialog>
   );
 }
 
 // ──── Primitives ─────────────────────────────────────────────
-
-function Shell({
-  title,
-  onClose,
-  children,
-}: {
-  title: string;
-  onClose: () => void;
-  children: React.ReactNode;
-}) {
-  return (
-    <div
-      className="fixed inset-0 z-50 bg-black/50 grid place-items-center p-4 overflow-y-auto"
-      onClick={onClose}
-    >
-      <div
-        className="bg-white rounded-2xl shadow-xl w-full max-w-md p-6 my-8"
-        onClick={(e) => e.stopPropagation()}
-      >
-        <h3 className="text-lg font-bold text-slate-900 mb-4">{title}</h3>
-        {children}
-      </div>
-    </div>
-  );
-}
 
 function Field({
   label,
@@ -279,42 +324,31 @@ function Field({
   defaultValue?: string;
 }) {
   return (
-    <label className="block">
-      <span className="block text-sm font-medium text-slate-700 mb-1">
-        {label}
-      </span>
-      <input
+    <div className="space-y-1">
+      <Label htmlFor={name}>{label}</Label>
+      <Input
+        id={name}
         type={type}
         step={step}
         name={name}
         placeholder={placeholder}
         defaultValue={defaultValue}
-        className="input-base"
+        inputSize="sm"
       />
-    </label>
+    </div>
   );
 }
 
-function FieldError({
-  state,
-  field,
-}: {
-  state: TxFormState;
-  field: string;
-}) {
+function FieldError({ state, field }: { state: TxFormState; field: string }) {
   if (state.ok) return null;
   const msg = state.fieldErrors?.[field];
   if (!msg) return null;
-  return <p className="text-red-600 text-sm -mt-3">{msg}</p>;
+  return <p className="text-money text-sm -mt-2">{msg}</p>;
 }
 
 function FormMsg({ state }: { state: TxFormState }) {
-  if (state.ok)
-    return (
-      <p className="text-sm text-green-700 font-medium">{state.message}</p>
-    );
-  if (state.error)
-    return <p className="text-sm text-red-600">{state.error}</p>;
+  if (!state.ok && state.error)
+    return <Alert variant="danger">{state.error}</Alert>;
   return null;
 }
 
@@ -326,21 +360,13 @@ function Footer({
   pending: boolean;
 }) {
   return (
-    <div className="flex justify-end gap-2 pt-2">
-      <button
-        type="button"
-        onClick={onClose}
-        className="btn-secondary !min-h-10 !text-sm"
-      >
+    <DialogFooter>
+      <Button variant="secondary" size="sm" type="button" onClick={onClose}>
         取消
-      </button>
-      <button
-        type="submit"
-        disabled={pending}
-        className="btn-primary !min-h-10 !text-sm"
-      >
+      </Button>
+      <Button type="submit" size="sm" disabled={pending}>
         {pending ? "處理中..." : "送出"}
-      </button>
-    </div>
+      </Button>
+    </DialogFooter>
   );
 }

@@ -2,7 +2,7 @@ import { Suspense } from "react";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { getCurrentAdmin } from "@/lib/admin-session";
-import { ChevronLeft } from "lucide-react";
+import { Button } from "@/ui/button";
 import { ReportsTabNav } from "./_components/tab-nav";
 
 export const metadata = {
@@ -15,17 +15,12 @@ export default function ReportsLayout({
   children: React.ReactNode;
 }) {
   return (
-    <div className="min-h-svh bg-slate-100">
-      <header className="bg-white border-b border-slate-200 sticky top-0 z-30">
+    <div className="min-h-svh bg-background">
+      <header className="bg-surface border-b border-hairline sticky top-0 z-30">
         <div className="max-w-[1400px] mx-auto px-4 py-3 flex items-center justify-between gap-4">
-          <div className="flex items-center gap-3">
-            <div className="w-9 h-9 rounded-lg bg-slate-900 text-white grid place-items-center font-black">
-              嘟
-            </div>
-            <div>
-              <p className="text-xs text-slate-500 leading-none">嘟嘟資訊網</p>
-              <h1 className="font-bold text-slate-900">帳簿系統</h1>
-            </div>
+          <div>
+            <p className="eyebrow leading-none">嘟嘟資訊網</p>
+            <h1 className="font-serif font-bold text-ink leading-tight mt-0.5">帳簿系統</h1>
           </div>
           <Suspense fallback={null}>
             <AdminPill />
@@ -47,13 +42,9 @@ async function AdminPill() {
 
   return (
     <div className="flex items-center gap-3 text-sm">
-      <Link
-        href="/admin"
-        className="inline-flex items-center text-slate-600 hover:text-slate-900"
-      >
-        <ChevronLeft className="w-4 h-4" />
-        回到後台
-      </Link>
+      <Button variant="ghost" size="sm" asChild>
+        <Link href="/admin">回到後台</Link>
+      </Button>
       <span className="text-slate-500">
         {admin.displayName ?? admin.username}
       </span>

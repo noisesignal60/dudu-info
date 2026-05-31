@@ -1,4 +1,6 @@
 import Link from "next/link";
+import { Button } from "@/ui/button";
+import { cn } from "@/lib/utils";
 import type { Department } from "@/data/reports/departments";
 
 type Props = {
@@ -30,21 +32,21 @@ export function ReportFilterBar({
 
   const hasFilter = !!(dept || year || month || quarter);
 
+  const fieldClass =
+    "rounded-lg border border-input bg-surface min-h-10 px-3 text-sm text-ink " +
+    "outline-none transition-[color,box-shadow] focus-visible:border-brand focus-visible:ring-4 focus-visible:ring-ring/25";
+
   return (
     <form
       method="get"
       action={basePath}
-      className="bg-white border border-slate-200 rounded-2xl p-4 flex flex-wrap items-end gap-3"
+      className="bg-card border border-hairline rounded-card p-4 flex flex-wrap items-end gap-3"
     >
       <div>
         <label className="block text-xs font-medium text-slate-500 mb-1">
           部門
         </label>
-        <select
-          name="dept"
-          defaultValue={dept}
-          className="input-base !min-h-10 !text-sm"
-        >
+        <select name="dept" defaultValue={dept} className={fieldClass}>
           <option value="">全部部門</option>
           {departments.map((d) => (
             <option key={d.id} value={d.id}>
@@ -66,7 +68,7 @@ export function ReportFilterBar({
             min={2000}
             max={2100}
             placeholder="2026"
-            className="input-base !min-h-10 !text-sm !w-28"
+            className={cn(fieldClass, "w-28")}
           />
         </div>
       )}
@@ -79,7 +81,7 @@ export function ReportFilterBar({
           <select
             name="month"
             defaultValue={month}
-            className="input-base !min-h-10 !text-sm !w-24"
+            className={cn(fieldClass, "w-24")}
           >
             <option value="">全部</option>
             {Array.from({ length: 12 }).map((_, i) => (
@@ -99,7 +101,7 @@ export function ReportFilterBar({
           <select
             name="quarter"
             defaultValue={quarter}
-            className="input-base !min-h-10 !text-sm !w-24"
+            className={cn(fieldClass, "w-24")}
           >
             <option value="">全部</option>
             <option value="1">Q1</option>
@@ -110,13 +112,13 @@ export function ReportFilterBar({
         </div>
       )}
 
-      <button type="submit" className="btn-primary !min-h-10 !text-sm">
+      <Button type="submit" size="sm">
         套用
-      </button>
+      </Button>
       {hasFilter && (
-        <Link href={basePath} className="btn-secondary !min-h-10 !text-sm">
-          清除篩選
-        </Link>
+        <Button variant="secondary" size="sm" asChild>
+          <Link href={basePath}>清除篩選</Link>
+        </Button>
       )}
     </form>
   );
