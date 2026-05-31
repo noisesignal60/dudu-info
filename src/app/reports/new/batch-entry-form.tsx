@@ -278,8 +278,8 @@ export function BatchEntryForm({
         提示：收入請填正數，支出請填正數。系統自動以欄位區分。所有變更會自動暫存到本機。
       </Alert>
 
-      {/* 多列輸入 */}
-      <div className="rounded-card border border-hairline overflow-hidden">
+      {/* 多列輸入 — 桌機：表格 */}
+      <div className="hidden md:block rounded-card border border-hairline overflow-hidden">
         <Table>
           <TableHeader>
             <TableRow className="bg-background hover:bg-background text-left">
@@ -403,11 +403,132 @@ export function BatchEntryForm({
         </Table>
       </div>
 
+      {/* 多列輸入 — 手機：每列一張卡片（全寬輸入，易填） */}
+      <div className="md:hidden space-y-3">
+        {state.present.map((row, idx) => (
+          <div
+            key={row.key}
+            className="rounded-card border border-hairline bg-surface shadow-premium-sm p-4 space-y-3"
+          >
+            <div className="flex items-center justify-between">
+              <span className="text-sm font-bold text-slate-400">第 {idx + 1} 列</span>
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                onClick={() => removeRow(idx)}
+                className="text-money"
+                aria-label="移除此列"
+              >
+                <Trash2 />
+                移除
+              </Button>
+            </div>
+
+            <CardField label="日期 *">
+              <input
+                type="date"
+                value={row.entryDate}
+                onChange={(e) => update(idx, { entryDate: e.target.value })}
+                className={cellInput("w-full")}
+              />
+            </CardField>
+            <CardField label="部門名稱 *">
+              <select
+                value={row.departmentId}
+                onChange={(e) => update(idx, { departmentId: e.target.value })}
+                className={cellInput("w-full")}
+              >
+                <option value="">請選擇</option>
+                {departments.map((d) => (
+                  <option key={d.id} value={d.id}>
+                    {d.name}
+                  </option>
+                ))}
+              </select>
+            </CardField>
+            <CardField label="車號/人名">
+              <input
+                type="text"
+                value={row.carOrPerson}
+                onChange={(e) => update(idx, { carOrPerson: e.target.value })}
+                className={cellInput("w-full")}
+              />
+            </CardField>
+            <CardField label="項目 *">
+              <input
+                type="text"
+                value={row.item}
+                onChange={(e) => update(idx, { item: e.target.value })}
+                className={cellInput("w-full")}
+              />
+            </CardField>
+            <div className="grid grid-cols-2 gap-3">
+              <CardField label="收入">
+                <input
+                  type="number"
+                  step="0.01"
+                  value={row.income}
+                  onChange={(e) => update(idx, { income: e.target.value })}
+                  className={cellInput("w-full text-right text-positive font-bold")}
+                  placeholder="0"
+                />
+              </CardField>
+              <CardField label="支出">
+                <input
+                  type="number"
+                  step="0.01"
+                  value={row.expense}
+                  onChange={(e) => update(idx, { expense: e.target.value })}
+                  className={cellInput("w-full text-right text-money font-bold")}
+                  placeholder="0"
+                />
+              </CardField>
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <CardField label="備註1">
+                <input
+                  type="text"
+                  value={row.note1}
+                  onChange={(e) => update(idx, { note1: e.target.value })}
+                  className={cellInput("w-full")}
+                />
+              </CardField>
+              <CardField label="備註2">
+                <input
+                  type="text"
+                  value={row.note2}
+                  onChange={(e) => update(idx, { note2: e.target.value })}
+                  className={cellInput("w-full")}
+                />
+              </CardField>
+            </div>
+          </div>
+        ))}
+      </div>
+
       <div className="text-sm text-slate-500">
         共 <strong>{state.present.length}</strong> 列 · 復原棧 {state.past.length}{" "}
         / 重做棧 {state.future.length}
       </div>
     </div>
+  );
+}
+
+function CardField({
+  label,
+  children,
+}: {
+  label: string;
+  children: React.ReactNode;
+}) {
+  return (
+    <label className="block">
+      <span className="block text-xs font-bold uppercase text-slate-500 mb-1">
+        {label}
+      </span>
+      {children}
+    </label>
   );
 }
 

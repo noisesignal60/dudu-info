@@ -23,7 +23,7 @@ function CardHeader({
     <div
       data-slot="card-header"
       className={cn(
-        "flex items-start justify-between gap-3 px-7 pt-6 pb-5",
+        "flex items-start justify-between gap-3 px-4 sm:px-6 lg:px-7 pt-6 pb-5",
         divider && "border-b border-hairline",
         className,
       )}
@@ -54,7 +54,7 @@ function CardDescription({ className, ...props }: React.ComponentProps<"p">) {
 
 function CardContent({ className, ...props }: React.ComponentProps<"div">) {
   return (
-    <div data-slot="card-content" className={cn("px-7 pb-7", className)} {...props} />
+    <div data-slot="card-content" className={cn("px-4 sm:px-6 lg:px-7 pb-7", className)} {...props} />
   );
 }
 
@@ -62,7 +62,7 @@ function CardFooter({ className, ...props }: React.ComponentProps<"div">) {
   return (
     <div
       data-slot="card-footer"
-      className={cn("flex items-center gap-3 px-7 pb-7 pt-0", className)}
+      className={cn("flex items-center gap-3 px-4 sm:px-6 lg:px-7 pb-7 pt-0", className)}
       {...props}
     />
   );

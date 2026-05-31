@@ -49,49 +49,19 @@ export async function listMembers(
   return queryMembers(q, page, pageSize);
 }
 
-async function queryMembers(
-  q: string,
-  page: number,
-  pageSize: number,
-): Promise<MemberListResult> {
-  "use cache";
-  cacheTag("admin-members");
-  cacheTag(`admin-members-q-${q}-${page}-${pageSize}`);
+const MEMBER_SELECT = `id, line_user_id, line_display, line_avatar_url, name, email, phone,
+   referral_code, created_at,
+   bank_holder, bank_account, bank_code, passbook_url,
+   upline:upline_id ( name, referral_code )`;
 
-  const db = supabaseAdmin();
-  const from = (page - 1) * pageSize;
-  const to = from + pageSize - 1;
+type MemberSelectRow = Record<string, unknown> & { id: string };
 
-  let query = db
-    .from("members")
-    .select(
-      `id, line_user_id, line_display, line_avatar_url, name, email, phone,
-       referral_code, created_at,
-       bank_holder, bank_account, bank_code, passbook_url,
-       upline:upline_id ( name, referral_code )`,
-      { count: "exact" },
-    )
-    .order("created_at", { ascending: false })
-    .range(from, to);
-
-  if (q) {
-    // 簡易搜尋：name / line_display / referral_code / email / phone
-    const pattern = `%${q}%`;
-    query = query.or(
-      [
-        `name.ilike.${pattern}`,
-        `line_display.ilike.${pattern}`,
-        `referral_code.ilike.${pattern}`,
-        `email.ilike.${pattern}`,
-        `phone.ilike.${pattern}`,
-      ].join(","),
-    );
-  }
-
-  const { data: rows, count } = await query;
-
-  // 補抓 balances + 下線數量
-  const ids = (rows ?? []).map((r) => r.id as string);
+/** 把 members 查詢結果補上 balances + 下線數量，並 mapping 成 AdminMemberRow[] */
+async function enrichMemberRows(
+  db: ReturnType<typeof supabaseAdmin>,
+  rows: MemberSelectRow[],
+): Promise<AdminMemberRow[]> {
+  const ids = rows.map((r) => r.id);
   const [balRes, downRes] = await Promise.all([
     ids.length
       ? db.from("balances").select("member_id, total_earned, pending, withdrawn, locked").in("member_id", ids)
@@ -116,15 +86,15 @@ async function queryMembers(
     downCount.set(uid, (downCount.get(uid) ?? 0) + 1);
   }
 
-  const mapped: AdminMemberRow[] = (rows ?? []).map((r) => {
+  return rows.map((r) => {
     const uplineRaw = r.upline as
       | { name: string | null; referral_code: string | null }
       | { name: string | null; referral_code: string | null }[]
       | null;
     const upline = Array.isArray(uplineRaw) ? uplineRaw[0] : uplineRaw;
-    const bal = balByMember.get(r.id as string);
+    const bal = balByMember.get(r.id);
     return {
-      id: r.id as string,
+      id: r.id,
       lineUserId: r.line_user_id as string,
       lineDisplay: r.line_display as string | null,
       lineAvatarUrl: r.line_avatar_url as string | null,
@@ -138,7 +108,7 @@ async function queryMembers(
       pending: bal?.pending ?? 0,
       withdrawn: bal?.withdrawn ?? 0,
       locked: bal?.locked ?? 0,
-      downlineCount: downCount.get(r.id as string) ?? 0,
+      downlineCount: downCount.get(r.id) ?? 0,
       bankHolder: r.bank_holder as string | null,
       bankAccount: r.bank_account as string | null,
       bankCode: r.bank_code as string | null,
@@ -146,8 +116,63 @@ async function queryMembers(
       createdAt: r.created_at as string,
     };
   });
+}
 
+/** 套用搜尋條件（name / line_display / referral_code / email / phone 模糊比對） */
+function applyMemberSearch<T extends { or: (f: string) => T }>(query: T, q: string): T {
+  if (!q) return query;
+  const pattern = `%${q}%`;
+  return query.or(
+    [
+      `name.ilike.${pattern}`,
+      `line_display.ilike.${pattern}`,
+      `referral_code.ilike.${pattern}`,
+      `email.ilike.${pattern}`,
+      `phone.ilike.${pattern}`,
+    ].join(","),
+  );
+}
+
+async function queryMembers(
+  q: string,
+  page: number,
+  pageSize: number,
+): Promise<MemberListResult> {
+  "use cache";
+  cacheTag("admin-members");
+  cacheTag(`admin-members-q-${q}-${page}-${pageSize}`);
+
+  const db = supabaseAdmin();
+  const from = (page - 1) * pageSize;
+  const to = from + pageSize - 1;
+
+  const query = db
+    .from("members")
+    .select(MEMBER_SELECT, { count: "exact" })
+    .order("created_at", { ascending: false })
+    .range(from, to);
+
+  const { data: rows, count } = await applyMemberSearch(query, q);
+
+  const mapped = await enrichMemberRows(db, (rows ?? []) as MemberSelectRow[]);
   return { rows: mapped, total: count ?? mapped.length, page, pageSize };
+}
+
+/** 匯出用：取回符合搜尋條件的全部會員（不分頁，上限 10000 筆） */
+export async function listMembersForExport(q: string): Promise<AdminMemberRow[]> {
+  "use cache";
+  cacheTag("admin-members");
+  cacheTag(`admin-members-export-${q}`);
+
+  const db = supabaseAdmin();
+  const query = db
+    .from("members")
+    .select(MEMBER_SELECT)
+    .order("created_at", { ascending: false })
+    .range(0, 9999);
+
+  const { data: rows } = await applyMemberSearch(query, q.trim());
+  return enrichMemberRows(db, (rows ?? []) as MemberSelectRow[]);
 }
 
 export async function getMemberById(id: string): Promise<AdminMemberRow | null> {

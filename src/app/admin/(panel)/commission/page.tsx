@@ -65,7 +65,7 @@ async function HistoryBlock() {
         {history.length === 0 ? (
           <EmptyState title="尚無變更紀錄" />
         ) : (
-          <div className="rounded-card border border-hairline overflow-hidden">
+          <div className="hidden md:block rounded-card border border-hairline overflow-hidden">
             <Table>
               <TableHeader>
                 <TableRow>
@@ -121,6 +121,51 @@ async function HistoryBlock() {
               </TableBody>
             </Table>
           </div>
+        )}
+
+        {/* 手機：卡片 */}
+        {history.length > 0 && (
+          <ul className="md:hidden space-y-3">
+            {history.map((h) => (
+              <li
+                key={h.id}
+                className="rounded-card border border-hairline bg-surface shadow-premium-sm p-4 space-y-3"
+              >
+                <div className="flex items-center justify-between gap-2">
+                  <span className="text-xs text-slate-500">
+                    {formatDateTime(h.createdAt)}
+                  </span>
+                  {h.isActive ? (
+                    <Badge variant="positive" size="sm">
+                      生效中
+                    </Badge>
+                  ) : (
+                    <Badge variant="neutral" size="sm">
+                      已被取代
+                    </Badge>
+                  )}
+                </div>
+                <div className="grid grid-cols-5 gap-2 text-center">
+                  {(["A", "B", "C", "D", "E"] as const).map((lv) => (
+                    <div key={lv} className="rounded-lg bg-canvas py-2">
+                      <p className="eyebrow text-slate-400">{lv}</p>
+                      <p className="fig text-ink tabular-nums">
+                        {h[`rate${lv}` as `rate${typeof lv}`]}%
+                      </p>
+                    </div>
+                  ))}
+                </div>
+                <dl className="grid grid-cols-2 gap-x-3 text-sm">
+                  <dt className="text-slate-500">新會員獎勵</dt>
+                  <dd className="text-ink text-right tabular-nums">
+                    {formatCurrency(h.newBonus)}
+                  </dd>
+                  <dt className="text-slate-500">變更人員</dt>
+                  <dd className="text-ink text-right">{h.changerName ?? "—"}</dd>
+                </dl>
+              </li>
+            ))}
+          </ul>
         )}
       </CardContent>
     </Card>

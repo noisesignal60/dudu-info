@@ -105,9 +105,20 @@
   }
 }
 
-/* 計程車司機族群：全站固定大字級（已移除 A/A+/A++ 切換） */
+/* 計程車司機族群：全站大字級。隨裝置階梯調整，避免手機版面擁擠／溢出。
+   手機 18px → 平板 21px → 桌機 24px（已移除 A/A+/A++ 切換） */
 html {
-  font-size: 24px;
+  font-size: 18px;
+}
+@media (min-width: 640px) {
+  html {
+    font-size: 21px;
+  }
+}
+@media (min-width: 1024px) {
+  html {
+    font-size: 24px;
+  }
 }
 
 body {

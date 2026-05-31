@@ -40,14 +40,21 @@ export default function AdminAdminsPage() {
 async function AdminTable() {
   const [rows, me] = await Promise.all([listAdmins(), getCurrentAdmin()]);
 
-  return (
-    <div className="rounded-card border border-hairline overflow-hidden">
-      {rows.length === 0 ? (
+  if (rows.length === 0) {
+    return (
+      <div className="rounded-card border border-hairline overflow-hidden">
         <EmptyState
           title="尚無管理員"
           description="第一位管理員需用 `npx tsx scripts/seed-admin.ts` 建立"
         />
-      ) : (
+      </div>
+    );
+  }
+
+  return (
+    <>
+      {/* 桌機：表格 */}
+      <div className="hidden md:block rounded-card border border-hairline overflow-hidden">
         <Table>
           <TableHeader>
             <TableRow>
@@ -100,8 +107,63 @@ async function AdminTable() {
             })}
           </TableBody>
         </Table>
-      )}
-    </div>
+      </div>
+
+      {/* 手機：卡片 */}
+      <ul className="md:hidden space-y-3">
+        {rows.map((a) => {
+          const isSelf = a.id === me?.adminId;
+          return (
+            <li
+              key={a.id}
+              className="bg-surface rounded-card border border-hairline shadow-premium-sm p-4 space-y-3"
+            >
+              <div className="flex items-center justify-between gap-3">
+                <div className="min-w-0">
+                  <div className="flex items-center gap-2">
+                    <Badge variant="neutral" size="sm" className="font-mono">
+                      {a.username}
+                    </Badge>
+                    {isSelf && (
+                      <span className="text-xs text-brand-dark font-bold">
+                        （我）
+                      </span>
+                    )}
+                  </div>
+                  <p className="font-semibold text-ink mt-1.5 truncate">
+                    {a.displayName}
+                  </p>
+                </div>
+                {a.isActive ? (
+                  <Badge variant="positive" size="sm">
+                    啟用
+                  </Badge>
+                ) : (
+                  <Badge variant="neutral" size="sm">
+                    停用
+                  </Badge>
+                )}
+              </div>
+
+              <dl className="grid grid-cols-2 gap-x-3 gap-y-1 text-sm">
+                <dt className="text-slate-500">建立時間</dt>
+                <dd className="text-ink text-right text-xs">
+                  {formatDateTime(a.createdAt)}
+                </dd>
+                <dt className="text-slate-500">最後登入</dt>
+                <dd className="text-ink text-right text-xs">
+                  {a.lastLoginAt ? formatDateTime(a.lastLoginAt) : "從未登入"}
+                </dd>
+              </dl>
+
+              <div className="flex justify-end border-t border-hairline pt-2">
+                <AdminListActions mode="row" admin={a} isSelf={isSelf} />
+              </div>
+            </li>
+          );
+        })}
+      </ul>
+    </>
   );
 }
 

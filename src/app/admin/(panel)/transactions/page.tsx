@@ -204,7 +204,8 @@ async function Listing({ searchParams }: { searchParams: SearchParams }) {
         共 <span className="font-bold text-ink">{total}</span> 筆 ・
         本頁 {rows.length}/{pageSize}
       </div>
-      <div className="rounded-card border border-hairline overflow-hidden">
+      {/* 桌機：表格 */}
+      <div className="hidden md:block rounded-card border border-hairline overflow-hidden">
         <Table>
           <TableHeader>
             <TableRow>
@@ -260,6 +261,56 @@ async function Listing({ searchParams }: { searchParams: SearchParams }) {
           </TableBody>
         </Table>
       </div>
+
+      {/* 手機：卡片 */}
+      <ul className="md:hidden space-y-3">
+        {rows.map((t) => {
+          const k = KIND_LABELS[t.kind];
+          return (
+            <li
+              key={t.id}
+              className="bg-surface rounded-card border border-hairline shadow-premium-sm p-4 space-y-2"
+            >
+              <div className="flex items-start justify-between gap-3">
+                <div className="min-w-0">
+                  <div className="flex items-center gap-2">
+                    <Badge variant={k.variant} size="sm">
+                      {k.label}
+                    </Badge>
+                    <Link
+                      href={`/admin/members/${t.memberId}`}
+                      className="font-medium text-ink hover:text-brand-dark truncate"
+                    >
+                      {t.memberName ?? t.memberLineDisplay ?? "—"}
+                    </Link>
+                  </div>
+                  <p className="font-semibold text-ink mt-1.5 truncate">{t.title}</p>
+                  {t.description && (
+                    <p className="text-sm text-slate-500 mt-0.5 truncate">
+                      {t.description}
+                    </p>
+                  )}
+                  <p className="text-xs text-slate-400 mt-1">
+                    {formatDateTime(t.createdAt)}
+                  </p>
+                </div>
+                <div
+                  className={cn(
+                    "fig shrink-0 text-lg",
+                    t.amount >= 0 ? "text-positive" : "text-money",
+                  )}
+                >
+                  {t.amount >= 0 ? "+" : ""}
+                  {formatCurrency(t.amount)}
+                </div>
+              </div>
+              <div className="flex justify-end border-t border-hairline pt-2">
+                <EditTxButton tx={t} />
+              </div>
+            </li>
+          );
+        })}
+      </ul>
     </div>
   );
 }

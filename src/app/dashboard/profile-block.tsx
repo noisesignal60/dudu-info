@@ -43,7 +43,6 @@ export function ProfileBlock({ member }: { member: MemberProfile }) {
           <Item label="姓名" value={member.name} />
           <Item label="Email" value={member.email} />
           <Item label="電話" value={member.phone} />
-          <Item label="生日" value={member.birthday} />
           <Item label="我的推薦碼" value={member.referralCode} highlight />
           <Item
             label="我的上級"
@@ -71,6 +70,7 @@ export function ProfileBlock({ member }: { member: MemberProfile }) {
   return (
     <form action={action} className="space-y-4">
       <Field label="姓名" required defaultValue={member.name ?? ""} name="name" err={err("name")} />
+      <Field label="Email（選填）" defaultValue={member.email ?? ""} name="email" type="email" err={err("email")} />
       <Field label="行動電話" required defaultValue={member.phone ?? ""} name="phone" type="tel" err={err("phone")} />
       <Field
         label="銀行戶名"

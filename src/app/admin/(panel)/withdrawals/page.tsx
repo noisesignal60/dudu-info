@@ -109,6 +109,16 @@ async function Listing({ searchParams }: { searchParams: SearchParams }) {
   const page = Math.max(1, Number(sp.page ?? 1) || 1);
   const { rows, total, pageSize } = await listAdminWithdrawals({ status, page });
 
+  // 預先解析每筆的存摺簽名網址（桌機表格與手機卡片共用）
+  const items = await Promise.all(
+    rows.map(async (w) => ({
+      w,
+      signedUrl: w.memberPassbookUrl
+        ? await getPassbookSignedUrl(w.memberPassbookUrl)
+        : null,
+    })),
+  );
+
   if (rows.length === 0) {
     return (
       <div className="rounded-card border border-hairline overflow-hidden">
@@ -123,7 +133,8 @@ async function Listing({ searchParams }: { searchParams: SearchParams }) {
         共 <span className="font-bold text-ink">{total}</span> 筆 ・
         本頁 {rows.length}/{pageSize}
       </div>
-      <div className="rounded-card border border-hairline overflow-hidden">
+      {/* 桌機：表格 */}
+      <div className="hidden md:block rounded-card border border-hairline overflow-hidden">
         <Table>
           <TableHeader>
             <TableRow>
@@ -139,10 +150,7 @@ async function Listing({ searchParams }: { searchParams: SearchParams }) {
             </TableRow>
           </TableHeader>
           <TableBody>
-            {rows.map(async (w) => {
-              const signedUrl = w.memberPassbookUrl
-                ? await getPassbookSignedUrl(w.memberPassbookUrl)
-                : null;
+            {items.map(({ w, signedUrl }) => {
               return (
                 <TableRow key={w.id}>
                   <TableCell className="text-xs text-slate-500 whitespace-nowrap">
@@ -179,6 +187,63 @@ async function Listing({ searchParams }: { searchParams: SearchParams }) {
           </TableBody>
         </Table>
       </div>
+
+      {/* 手機：卡片 */}
+      <ul className="md:hidden space-y-3">
+        {items.map(({ w, signedUrl }) => (
+          <li
+            key={w.id}
+            className="bg-surface rounded-card border border-hairline shadow-premium-sm p-4 space-y-3"
+          >
+            <div className="flex items-start justify-between gap-3">
+              <div className="min-w-0">
+                <Link
+                  href={`/admin/members/${w.memberId}`}
+                  className="font-semibold text-ink hover:text-brand-dark truncate block"
+                >
+                  {w.memberName ?? w.memberLineDisplay ?? "—"}
+                </Link>
+                <p className="text-xs text-slate-400 mt-1">
+                  {formatDateTime(w.createdAt)}
+                </p>
+              </div>
+              <div className="text-right shrink-0">
+                <div className="fig text-lg text-money">
+                  {formatCurrency(w.amount)}
+                </div>
+                <div className="mt-1">
+                  <StatusBadge status={w.status} />
+                </div>
+              </div>
+            </div>
+
+            <dl className="grid grid-cols-2 gap-x-3 gap-y-1 text-sm">
+              <dt className="text-slate-500">銀行</dt>
+              <dd className="text-ink text-right">{w.bankCode ?? "—"}</dd>
+              <dt className="text-slate-500">帳號</dt>
+              <dd className="text-ink text-right break-all">{w.bankAccount ?? "—"}</dd>
+              {w.note && (
+                <>
+                  <dt className="text-slate-500">備註</dt>
+                  <dd className="text-ink text-right break-words">{w.note}</dd>
+                </>
+              )}
+              {w.processedAt && (
+                <>
+                  <dt className="text-slate-500">處理時間</dt>
+                  <dd className="text-slate-500 text-right text-xs">
+                    {formatDateTime(w.processedAt)}
+                  </dd>
+                </>
+              )}
+            </dl>
+
+            <div className="flex justify-end border-t border-hairline pt-2">
+              <ReviewButton withdrawal={w} passbookUrl={signedUrl} />
+            </div>
+          </li>
+        ))}
+      </ul>
     </div>
   );
 }

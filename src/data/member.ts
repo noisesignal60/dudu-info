@@ -9,7 +9,6 @@ export type MemberProfile = {
   name: string | null;
   email: string | null;
   phone: string | null;
-  birthday: string | null;
   bankHolder: string | null;
   bankAccount: string | null;
   bankCode: string | null;
@@ -39,7 +38,7 @@ async function getMemberById(memberId: string): Promise<MemberProfile | null> {
   const { data, error } = await db
     .from("members")
     .select(
-      `id, name, email, phone, birthday,
+      `id, name, email, phone,
        bank_holder, bank_account, bank_code, passbook_url,
        referral_code, line_display, line_avatar_url, profile_completed,
        upline:upline_id ( name, referral_code )`,
@@ -61,7 +60,6 @@ async function getMemberById(memberId: string): Promise<MemberProfile | null> {
     name: data.name,
     email: data.email,
     phone: data.phone,
-    birthday: data.birthday,
     bankHolder: data.bank_holder,
     bankAccount: data.bank_account,
     bankCode: data.bank_code,

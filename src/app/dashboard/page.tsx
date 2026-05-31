@@ -90,14 +90,14 @@ async function StatsGrid() {
       </div>
 
       {/* 其餘金額 */}
-      <div className="grid grid-cols-3 gap-3">
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
         <StatCard label="總金額" value={stats.totalAmount} />
         <StatCard label="已領取金額" value={stats.withdrawnAmount} />
         <StatCard label="審核中金額" value={stats.lockedAmount} />
       </div>
 
       {/* 人數：次要對帳列 */}
-      <div className="rounded-card border border-hairline bg-surface flex divide-x divide-hairline">
+      <div className="rounded-card border border-hairline bg-surface flex flex-col divide-y sm:flex-row sm:divide-y-0 sm:divide-x divide-hairline">
         <div className="flex-1 px-4 py-3 flex items-center justify-between gap-2">
           <span className="eyebrow text-slate-500">我的推薦人數</span>
           <span className="fig text-lg text-ink">
@@ -133,7 +133,7 @@ async function ReferralBlock() {
           {me.referralCode}
         </p>
       </div>
-      <div className="mt-4 grid grid-cols-2 gap-3">
+      <div className="mt-4 grid grid-cols-1 sm:grid-cols-2 gap-3">
         <CopyButton text={me.referralCode} label="複製推薦碼" />
         <ShareLineButton text={shareText} />
       </div>
@@ -214,7 +214,7 @@ function StatsSkeleton() {
   return (
     <div className="space-y-3">
       <Skeleton className="h-20 rounded-card" />
-      <div className="grid grid-cols-3 gap-3">
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
         {Array.from({ length: 3 }).map((_, i) => (
           <Skeleton key={i} className="h-20 rounded-card" />
         ))}

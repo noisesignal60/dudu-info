@@ -39,6 +39,9 @@ yarn-error.log*
 # claude code local settings
 .claude/settings.local.json
 
+# agent skills (installed by `npx skills add`)
+/.agents/
+
 # typescript
 *.tsbuildinfo
 next-env.d.ts

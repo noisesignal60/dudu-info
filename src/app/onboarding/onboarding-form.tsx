@@ -30,6 +30,17 @@ export function OnboardingForm() {
         <Input name="name" required inputSize="touch" placeholder="王大明" aria-invalid={!!err("name")} />
       </Field>
 
+      <Field label="Email（選填）" error={err("email")}>
+        <Input
+          name="email"
+          type="email"
+          inputMode="email"
+          inputSize="touch"
+          placeholder="example@mail.com"
+          aria-invalid={!!err("email")}
+        />
+      </Field>
+
       <Field label="行動電話" required error={err("phone")}>
         <Input
           name="phone"

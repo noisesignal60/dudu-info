@@ -6,6 +6,8 @@ import { z } from "zod";
 import { getCurrentAdmin } from "@/lib/admin-session";
 import { supabaseAdmin } from "@/lib/supabase/admin";
 import { addPassbookWatermark } from "@/lib/watermark";
+import { listMembersForExport } from "@/data/admin/members";
+import { formatDateTime } from "@/lib/utils";
 
 const PASSBOOK_BUCKET = process.env.SUPABASE_BUCKET_PASSBOOK || "passbooks";
 
@@ -118,4 +120,70 @@ export async function replaceMemberPassbookAction(
   revalidateTag(`admin-member-${memberId}`, "max");
   revalidateTag(`member-${memberId}`, "max");
   return { ok: true, message: "已更換存摺圖片" };
+}
+
+export async function exportMembersCsvAction(
+  filters: { q?: string } = {},
+): Promise<
+  { ok: true; csv: string; filename: string } | { ok: false; error: string }
+> {
+  await requireAdmin();
+
+  try {
+    const rows = await listMembersForExport(filters.q ?? "");
+
+    const head = [
+      "LINE 顯示名稱",
+      "姓名",
+      "Email",
+      "電話",
+      "推薦碼",
+      "上級",
+      "銀行戶名",
+      "銀行代碼",
+      "銀行帳號",
+      "總收益",
+      "待領取",
+      "已領取",
+      "下包數",
+      "註冊時間",
+    ];
+    const lines = [head.join(",")];
+    for (const r of rows) {
+      lines.push(
+        [
+          r.lineDisplay ?? "",
+          r.name ?? "",
+          r.email ?? "",
+          r.phone ?? "",
+          r.referralCode ?? "",
+          r.uplineName ?? "",
+          r.bankHolder ?? "",
+          r.bankCode ?? "",
+          r.bankAccount ?? "",
+          r.totalEarned,
+          r.pending,
+          r.withdrawn,
+          r.downlineCount,
+          formatDateTime(r.createdAt),
+        ]
+          .map(csvEscape)
+          .join(","),
+      );
+    }
+
+    const csv = "﻿" + lines.join("\n");
+    const filename = `members_${new Date().toISOString().slice(0, 10)}.csv`;
+    return { ok: true, csv, filename };
+  } catch (err) {
+    console.error("[admin-members] export csv error", err);
+    return { ok: false, error: "匯出失敗，請稍後再試" };
+  }
+}
+
+function csvEscape(v: unknown): string {
+  if (v == null) return "";
+  const s = String(v);
+  if (/[",\n]/.test(s)) return `"${s.replace(/"/g, '""')}"`;
+  return s;
 }
