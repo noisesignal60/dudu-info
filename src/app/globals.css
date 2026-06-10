@@ -55,6 +55,13 @@
   --border: var(--color-hairline);
   --input: #cbd5e1;                            /* 輸入框邊框 slate-300 */
   --ring: var(--color-accent-blue);            /* focus ring 用招牌深藍（原為 brand 深藍黑） */
+
+  /* ===== 圖表分類色盤（圓餅圖各部門循環取用，超過 5 個從頭循環） ===== */
+  --chart-1: #2563EB;   /* blue-600 */
+  --chart-2: #16A34A;   /* green-600 */
+  --chart-3: #EA580C;   /* orange-600 */
+  --chart-4: #9333EA;   /* purple-600 */
+  --chart-5: #0891B2;   /* cyan-600 */
 }
 
 /* 把語意值曝光成 utility（bg-background / text-primary / border-border / ring …）

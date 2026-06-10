@@ -1,5 +1,6 @@
 import { formatCurrency, cn } from "@/lib/utils";
 import { Card } from "@/ui/card";
+import { FitText } from "./fit-text";
 
 export function LedgerStatsBar({
   income,
@@ -10,7 +11,7 @@ export function LedgerStatsBar({
 }) {
   const net = income - expense;
   return (
-    <div className="grid grid-cols-3 gap-3">
+    <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
       <StatCard label="總收入" value={income} tone="positive" />
       <StatCard label="總支出" value={expense} tone="negative" />
       <StatCard
@@ -40,12 +41,14 @@ function StatCard({
       ? "bg-green-50 border-green-200"
       : "bg-red-50 border-red-200";
   return (
-    <Card className={cn("p-4", emphasize && bg)}>
-      <p className="eyebrow text-slate-500">{label}</p>
-      <p className={cn("fig font-black mt-1.5 text-xl leading-none", color)}>
-        {value >= 0 ? "" : "-"}
-        {formatCurrency(Math.abs(value))}
-      </p>
+    <Card className={cn("p-4 min-w-0", emphasize && bg)}>
+      <p className="eyebrow text-slate-500 text-center">{label}</p>
+      <FitText
+        className="mt-1.5"
+        textClassName={cn("fig font-black text-xl leading-none", color)}
+      >
+        {(value >= 0 ? "" : "-") + formatCurrency(Math.abs(value))}
+      </FitText>
     </Card>
   );
 }

@@ -1,7 +1,11 @@
 import { Suspense } from "react";
 import { Skeleton } from "@/ui/skeleton";
 import { listDepartments } from "@/data/reports/departments";
-import { listLedger, type LedgerSortKey } from "@/data/reports/ledger";
+import {
+  listLedger,
+  listLedgerYears,
+  type LedgerSortKey,
+} from "@/data/reports/ledger";
 import { LedgerStatsBar } from "./_components/stats-bar";
 import { ReportFilterBar } from "./_components/filter-bar";
 import { LedgerGrid } from "./_components/ledger-grid";
@@ -65,12 +69,17 @@ async function ToolbarBlock({ searchParams }: { searchParams: SearchParams }) {
 }
 
 async function FilterBlock({ searchParams }: { searchParams: SearchParams }) {
-  const [sp, departments] = await Promise.all([searchParams, listDepartments()]);
+  const [sp, departments, years] = await Promise.all([
+    searchParams,
+    listDepartments(),
+    listLedgerYears(),
+  ]);
   return (
     <ReportFilterBar
       basePath="/reports"
       searchParams={sp}
       showYear
+      years={years}
       departments={departments}
     />
   );

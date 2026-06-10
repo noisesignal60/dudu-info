@@ -124,7 +124,7 @@ export function CommissionForm({
       </form>
 
       <aside className="lg:col-span-1">
-        <div className="bg-brand-soft border border-brand/30 rounded-2xl p-5 sticky top-4">
+        <div className="bg-brand-soft border border-brand/30 rounded-2xl p-5 sticky top-20">
           <h3 className="font-bold text-brand-dark mb-1">即時計算範例</h3>
           <p className="text-sm text-brand-dark/80 mb-4">
             基於 {formatCurrency(SAMPLE)} 的範例

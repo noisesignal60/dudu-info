@@ -9,7 +9,7 @@ import {
   useState,
 } from "react";
 import { useRouter } from "next/navigation";
-import { Trash2, Upload } from "lucide-react";
+import { ChevronDown, Trash2, Upload } from "lucide-react";
 import {
   saveLedgerGridAction,
   type GridUpsertRow,
@@ -125,10 +125,32 @@ function randKey() {
   return Math.random().toString(36).slice(2);
 }
 
+/**
+ * 輸入框游標是否在文字最前/最後（供編輯中以左右鍵切換欄位）。
+ * number input 讀 selectionStart 會丟例外，讀不到一律視為在邊界（直接切換）。
+ */
+function caretAtEdge(el: HTMLInputElement, edge: "start" | "end"): boolean {
+  try {
+    const s = el.selectionStart;
+    const e = el.selectionEnd;
+    if (s === null || e === null) return true;
+    return edge === "start"
+      ? s === 0 && e === 0
+      : s === el.value.length && e === el.value.length;
+  } catch {
+    return true;
+  }
+}
+
+/** 今天的 ISO 日期（`YYYY-MM-DD`），日期欄的預設值。 */
+function todayISO(): string {
+  return new Date().toISOString().slice(0, 10);
+}
+
 function makeRow(initial?: Partial<Row>): Row {
   return {
     key: randKey(),
-    entryDate: initial?.entryDate ?? new Date().toISOString().slice(0, 10),
+    entryDate: initial?.entryDate ?? todayISO(),
     departmentName: initial?.departmentName ?? "",
     carOrPerson: initial?.carOrPerson ?? "",
     item: initial?.item ?? "",
@@ -230,11 +252,17 @@ function sameNorm(a: Norm, b: Norm): boolean {
   );
 }
 
-type Problem = "date" | "deptEmpty" | "deptUnmatched" | "item" | null;
+type Problem =
+  | "date"
+  | "otherDay"
+  | "deptEmpty"
+  | "deptUnmatched"
+  | "item"
+  | null;
 
 function isCellInvalid(problem: Problem, field: RowField): boolean {
   if (!problem) return false;
-  if (field === "entryDate") return problem === "date";
+  if (field === "entryDate") return problem === "date" || problem === "otherDay";
   if (field === "departmentName")
     return problem === "deptEmpty" || problem === "deptUnmatched";
   if (field === "item") return problem === "item";
@@ -244,11 +272,16 @@ function isCellInvalid(problem: Problem, field: RowField): boolean {
 export function LedgerGrid({
   initialRows,
   departments,
+  expectedDate,
 }: {
   initialRows: LedgerEntry[];
   departments: Department[];
+  // 日報表用：限定當日；列日期非此值會標紅，新列也預設為此日。
+  expectedDate?: string;
 }) {
   const router = useRouter();
+  // 新列／初始空白列的預設日期：日報表用選定當日，其餘頁用今天。
+  const defaultDate = expectedDate ?? todayISO();
 
   const nameToId = useMemo(() => {
     const m = new Map<string, string>();
@@ -268,7 +301,11 @@ export function LedgerGrid({
 
   const initialState = useMemo<HistoryState>(() => {
     const rows = toRows(initialRows);
-    return { past: [], present: rows.length ? rows : [makeRow()], future: [] };
+    return {
+      past: [],
+      present: rows.length ? rows : [makeRow({ entryDate: defaultDate })],
+      future: [],
+    };
     // 只在掛載時建立一次
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
@@ -295,11 +332,14 @@ export function LedgerGrid({
     initialRef.current = initialRows;
     baselineRef.current = buildBaseline(initialRows);
     const rows = toRows(initialRows);
-    dispatch({ type: "load", rows: rows.length ? rows : [makeRow()] });
+    dispatch({
+      type: "load",
+      rows: rows.length ? rows : [makeRow({ entryDate: defaultDate })],
+    });
     setActive(null);
     setEditing(false);
     setSelected(new Set());
-  }, [initialRows]);
+  }, [initialRows, defaultDate]);
 
   const update = useCallback(
     (idx: number, patch: Partial<Row>) => {
@@ -318,12 +358,14 @@ export function LedgerGrid({
       rows: [
         ...state.present,
         makeRow({
-          entryDate: last?.entryDate ?? new Date().toISOString().slice(0, 10),
+          // 新增列帶預設日期（日報表＝選定當日，其餘＝今天；
+          // 資料依日期遞減排序，最後一列其實是最舊那筆，不該沿用）
+          entryDate: defaultDate,
           departmentName: last?.departmentName ?? "",
         }),
       ],
     });
-  }, [state.present]);
+  }, [state.present, defaultDate]);
 
   const removeRow = useCallback(
     (idx: number) => {
@@ -372,7 +414,9 @@ export function LedgerGrid({
   // ── 試算表互動 ───────────────────────────────────────────────
   // 同步聚焦（不可用 rAF：否則點選排程的聚焦會在雙擊進入編輯後搶走焦點）
   const focusGrid = useCallback(() => {
-    gridRef.current?.focus();
+    // preventScroll：換格時焦點回到捲動容器，但不要把頁面捲回表格頂端
+    // （否則數字鍵盤連續輸入＋Enter 時，每次都「跳到上方」）。
+    gridRef.current?.focus({ preventScroll: true });
   }, []);
 
   const selectCell = useCallback(
@@ -389,7 +433,7 @@ export function LedgerGrid({
       const col = COLS[c];
       if (col.type === "dept") return; // 部門用下拉選取，不進入文字編輯
       editBackupRef.current = state.present[r]?.[col.field] ?? "";
-      if (initial !== undefined && col.type !== "date") {
+      if (initial !== undefined) {
         setEditSelectAll(false);
         update(r, { [col.field]: initial });
       } else {
@@ -439,6 +483,16 @@ export function LedgerGrid({
     },
     [state.present.length, focusGrid],
   );
+
+  // 結束編輯：日期欄把使用者打的字串正規化成 ISO（其他欄位只是離開編輯）。
+  const commitEdit = useCallback(() => {
+    if (active && COLS[active.c].type === "date") {
+      const raw = state.present[active.r]?.entryDate ?? "";
+      // 可解析→存 ISO；不可解析但有輸入→保留原字串（避免打到一半 blur 被清空）；空白→留空
+      update(active.r, { entryDate: parseDateInput(raw) || raw });
+    }
+    setEditing(false);
+  }, [active, state.present, update]);
 
   function onGridKeyDown(e: React.KeyboardEvent) {
     if (editing) return; // 編輯中由 editor 自行處理
@@ -494,15 +548,35 @@ export function LedgerGrid({
   }
 
   function onEditorKeyDown(e: React.KeyboardEvent) {
+    const el = e.currentTarget as HTMLInputElement;
+    const nav = (dr: number, dc: number) => {
+      e.preventDefault();
+      e.stopPropagation();
+      commitEdit();
+      moveActive(dr, dc);
+    };
+    // 編輯中也能用方向鍵切換儲存格：上/下一律移動列；左/右在游標位於
+    // 文字頭/尾時才移動欄（否則維持格內游標移動，不破壞文字編輯）。
+    if (e.key === "ArrowUp") return nav(-1, 0);
+    if (e.key === "ArrowDown") return nav(1, 0);
+    if (e.key === "ArrowLeft") {
+      if (caretAtEdge(el, "start")) nav(0, -1);
+      return;
+    }
+    if (e.key === "ArrowRight") {
+      if (caretAtEdge(el, "end")) nav(0, 1);
+      return;
+    }
+
     if (e.key === "Enter") {
       e.preventDefault();
       e.stopPropagation();
-      setEditing(false);
+      commitEdit();
       moveActive(1, 0);
     } else if (e.key === "Tab") {
       e.preventDefault();
       e.stopPropagation();
-      setEditing(false);
+      commitEdit();
       tabMove(e.shiftKey);
     } else if (e.key === "Escape") {
       e.preventDefault();
@@ -585,15 +659,20 @@ export function LedgerGrid({
   // ── 每列問題（即時內嵌驗證） ─────────────────────────────────
   const rowProblem = useCallback(
     (r: Row): Problem => {
+      const iso = parseDateInput(r.entryDate);
+      // 日期有填但格式不對 → 一律標紅（即使整列其他欄還沒填完，如新增頁的空白列）
+      if (r.entryDate.trim() && !iso) return "date";
+      // 日報表：日期合法但不是選定當日 → 標紅（含只填日期的空列）
+      if (expectedDate && iso && iso !== expectedDate) return "otherDay";
       if (!isMeaningful(r)) return null;
-      if (!r.entryDate) return "date";
+      if (!iso) return "date"; // meaningful 列：空白或非合法日期皆標紅
       const name = r.departmentName.trim();
       if (!name) return "deptEmpty";
       if (resolveDeptId(name) === null) return "deptUnmatched";
       if (!r.item.trim()) return "item";
       return null;
     },
-    [resolveDeptId],
+    [resolveDeptId, expectedDate],
   );
 
   // ── 儲存（算出新增/修改/刪除） ───────────────────────────────
@@ -606,12 +685,14 @@ export function LedgerGrid({
       if (!p) return;
       const reason =
         p === "date"
-          ? "缺日期"
-          : p === "deptEmpty"
-            ? "缺部門"
-            : p === "deptUnmatched"
-              ? "部門對不到清單"
-              : "缺項目";
+          ? "日期不正確"
+          : p === "otherDay"
+            ? "日期不是選定的那天"
+            : p === "deptEmpty"
+              ? "缺部門"
+              : p === "deptUnmatched"
+                ? "部門對不到清單"
+                : "缺項目";
       problems.push(`第 ${i + 1} 列${reason}`);
     });
     if (problems.length > 0) {
@@ -854,7 +935,8 @@ export function LedgerGrid({
                           className={cn(
                             "h-9 cursor-cell",
                             col.right && "text-right",
-                            invalid && sheetInvalidCls,
+                            // 編輯中不套紅底，避免打字過程的半成品閃紅
+                            invalid && !isEditing && sheetInvalidCls,
                             isActive && sheetActiveCls,
                           )}
                           style={{ width: col.width }}
@@ -865,7 +947,7 @@ export function LedgerGrid({
                               value={row[col.field]}
                               onChange={(v) => update(r, { [col.field]: v })}
                               onKeyDown={onEditorKeyDown}
-                              onBlur={() => setEditing(false)}
+                              onBlur={commitEdit}
                               selectAll={editSelectAll}
                             />
                           ) : (
@@ -883,8 +965,7 @@ export function LedgerGrid({
           </SheetTable>
         </SheetScroll>
         <p className="mt-2 text-sm text-slate-500">
-          共 <strong>{state.present.length}</strong> 列 · 復原棧{" "}
-          {state.past.length} / 重做棧 {state.future.length}
+          共 <strong>{state.present.length}</strong> 列
         </p>
       </div>
 
@@ -917,8 +998,11 @@ export function LedgerGrid({
               <CardField label="日期 *">
                 <input
                   type="date"
-                  value={row.entryDate}
-                  onChange={(e) => update(idx, { entryDate: e.target.value })}
+                  // 空值回落到今天，避免原生日期欄選擇器開在 0001 年
+                  value={row.entryDate || todayISO()}
+                  onChange={(e) =>
+                    update(idx, { entryDate: e.target.value || todayISO() })
+                  }
                   className={mobileInput(problem === "date")}
                 />
               </CardField>
@@ -1023,11 +1107,34 @@ function formatDateSlash(iso: string): string {
   return `${m[1]}/${Number(m[2])}/${Number(m[3])}`;
 }
 
+/**
+ * 把使用者鍵入的字串解析成 ISO `YYYY-MM-DD`。容許：
+ * `YYYYMMDD`、`YYYY[-/.]M[-/.]D`、以及無年的 `M[-/.]D`（補當年）。
+ * 月日超出範圍或無法解析回空字串（由驗證標紅）；空字串亦回空字串。
+ */
+function parseDateInput(raw: string): string {
+  const s = raw.trim();
+  if (!s) return "";
+  const build = (y: number, mo: number, d: number): string => {
+    if (mo < 1 || mo > 12 || d < 1 || d > 31) return "";
+    return `${y}-${String(mo).padStart(2, "0")}-${String(d).padStart(2, "0")}`;
+  };
+  let m = s.match(/^(\d{4})(\d{2})(\d{2})$/u);
+  if (m) return build(Number(m[1]), Number(m[2]), Number(m[3]));
+  m = s.match(/^(\d{4})[-/.](\d{1,2})[-/.](\d{1,2})$/u);
+  if (m) return build(Number(m[1]), Number(m[2]), Number(m[3]));
+  m = s.match(/^(\d{1,2})[-/.](\d{1,2})$/u);
+  if (m) return build(new Date().getFullYear(), Number(m[1]), Number(m[2]));
+  return "";
+}
+
 function displayValue(row: Row, col: Col): string {
   const raw = row[col.field];
   if (col.type === "number") {
-    const n = num(raw);
-    return n ? formatCurrency(n) : "";
+    // 空字串＝未輸入 → 留白（沒用到的收入/支出欄不顯示 0）；
+    // 明確輸入的 "0" 則照常顯示，不會在離開儲存格後消失。
+    if (raw.trim() === "") return "";
+    return formatCurrency(num(raw));
   }
   if (col.type === "date") return formatDateSlash(raw);
   return raw;
@@ -1046,22 +1153,27 @@ function DeptCellSelect({
   onChange: (v: string) => void;
 }) {
   return (
-    <select
-      value={value}
-      onChange={(e) => onChange(e.target.value)}
-      // 阻止冒泡到儲存格的 onClick（selectCell→focusGrid 會把焦點搶走、害下拉瞬間收起）
-      onMouseDown={(e) => e.stopPropagation()}
-      onClick={(e) => e.stopPropagation()}
-      className="w-full h-9 bg-transparent px-1 text-sm outline-none cursor-pointer"
-    >
-      <option value="">請選擇</option>
-      {unmatched && <option value={value}>{value}（未對應）</option>}
-      {departments.map((d) => (
-        <option key={d.id} value={d.name}>
-          {d.name}
-        </option>
-      ))}
-    </select>
+    // 關閉原生箭頭、自繪 ChevronDown，並讓長文字以 … 截斷且為箭頭保留右側空間，
+    // 避免過長的部門名稱（尤其「（未對應）」後綴）壓到下拉箭頭上。
+    <div className="relative h-9">
+      <select
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        // 阻止冒泡到儲存格的 onClick（selectCell→focusGrid 會把焦點搶走、害下拉瞬間收起）
+        onMouseDown={(e) => e.stopPropagation()}
+        onClick={(e) => e.stopPropagation()}
+        className="w-full h-9 appearance-none truncate bg-transparent pl-1 pr-6 text-sm outline-none cursor-pointer"
+      >
+        <option value="">請選擇</option>
+        {unmatched && <option value={value}>{value}（未對應）</option>}
+        {departments.map((d) => (
+          <option key={d.id} value={d.name}>
+            {d.name}
+          </option>
+        ))}
+      </select>
+      <ChevronDown className="pointer-events-none absolute right-1.5 top-1/2 -translate-y-1/2 size-3.5 text-slate-400" />
+    </div>
   );
 }
 
@@ -1087,17 +1199,24 @@ function CellEditor({
   const onFocus = (e: React.FocusEvent<HTMLInputElement>) => {
     if (selectAll) e.currentTarget.select();
   };
+  // 阻止冒泡到儲存格的 onClick（selectCell→focusGrid 會搶走焦點、害編輯器卸載）。
+  const stop = (e: React.SyntheticEvent) => e.stopPropagation();
 
+  // 日期欄：用文字輸入自由打字（2026/5/31、5/31、20260531…），提交時由 commitEdit 解析成 ISO。
   if (col.type === "date")
     return (
       <input
-        type="date"
+        type="text"
+        inputMode="numeric"
         autoFocus
         value={value}
         onChange={(e) => onChange(e.target.value)}
         onKeyDown={onKeyDown}
         onBlur={onBlur}
         onFocus={onFocus}
+        onMouseDown={stop}
+        onClick={stop}
+        placeholder="2026/5/31"
         className={base}
       />
     );
@@ -1112,6 +1231,8 @@ function CellEditor({
         onKeyDown={onKeyDown}
         onBlur={onBlur}
         onFocus={onFocus}
+        onMouseDown={stop}
+        onClick={stop}
         className={base}
       />
     );
@@ -1124,6 +1245,8 @@ function CellEditor({
       onKeyDown={onKeyDown}
       onBlur={onBlur}
       onFocus={onFocus}
+      onMouseDown={stop}
+      onClick={stop}
       className={base}
     />
   );

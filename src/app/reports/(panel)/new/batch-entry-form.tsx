@@ -87,10 +87,15 @@ function reducer(s: HistoryState, a: Act): HistoryState {
   return s;
 }
 
+/** 今天的 ISO 日期（`YYYY-MM-DD`），日期欄的預設值。 */
+function todayISO(): string {
+  return new Date().toISOString().slice(0, 10);
+}
+
 function makeRow(initial?: Partial<Row>): Row {
   return {
     key: Math.random().toString(36).slice(2),
-    entryDate: initial?.entryDate ?? new Date().toISOString().slice(0, 10),
+    entryDate: initial?.entryDate ?? todayISO(),
     departmentId: initial?.departmentId ?? "",
     carOrPerson: initial?.carOrPerson ?? "",
     item: initial?.item ?? "",
@@ -145,8 +150,7 @@ export function BatchEntryForm({
 
   const addRow = useCallback(() => {
     const lastDate =
-      state.present[state.present.length - 1]?.entryDate ??
-      new Date().toISOString().slice(0, 10);
+      state.present[state.present.length - 1]?.entryDate ?? todayISO();
     const lastDept = state.present[state.present.length - 1]?.departmentId ?? "";
     dispatch({
       type: "set",
@@ -302,9 +306,10 @@ export function BatchEntryForm({
                   <Td className="p-1.5">
                     <input
                       type="date"
-                      value={row.entryDate}
+                      // 空值回落到今天，避免原生日期欄選擇器開在 0001 年
+                      value={row.entryDate || todayISO()}
                       onChange={(e) =>
-                        update(idx, { entryDate: e.target.value })
+                        update(idx, { entryDate: e.target.value || todayISO() })
                       }
                       className={cellInput("w-36")}
                     />
@@ -428,8 +433,11 @@ export function BatchEntryForm({
             <CardField label="日期 *">
               <input
                 type="date"
-                value={row.entryDate}
-                onChange={(e) => update(idx, { entryDate: e.target.value })}
+                // 空值回落到今天，避免原生日期欄選擇器開在 0001 年
+                value={row.entryDate || todayISO()}
+                onChange={(e) =>
+                  update(idx, { entryDate: e.target.value || todayISO() })
+                }
                 className={cellInput("w-full")}
               />
             </CardField>
@@ -508,8 +516,7 @@ export function BatchEntryForm({
       </div>
 
       <div className="text-sm text-slate-500">
-        共 <strong>{state.present.length}</strong> 列 · 復原棧 {state.past.length}{" "}
-        / 重做棧 {state.future.length}
+        共 <strong>{state.present.length}</strong> 列
       </div>
     </div>
   );

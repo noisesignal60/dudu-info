@@ -1,3 +1,5 @@
+"use client";
+
 import Link from "next/link";
 import { Button } from "@/ui/button";
 import { cn } from "@/lib/utils";
@@ -10,10 +12,13 @@ type Props = {
     year?: string;
     month?: string;
     quarter?: string;
+    day?: string;
   };
   showMonth?: boolean;
   showQuarter?: boolean;
   showYear?: boolean;
+  showDay?: boolean;
+  years?: number[]; // 年份下拉選項（由新到舊）；搭配 showYear
   departments: Department[];
 };
 
@@ -23,14 +28,22 @@ export function ReportFilterBar({
   showMonth,
   showQuarter,
   showYear,
+  showDay,
+  years = [],
   departments,
 }: Props) {
   const year = searchParams.year ?? "";
   const month = searchParams.month ?? "";
   const quarter = searchParams.quarter ?? "";
+  const day = searchParams.day ?? "";
   const dept = searchParams.dept ?? "";
 
-  const hasFilter = !!(dept || year || month || quarter);
+  // 目前選定年份若不在清單內（手動帶入的網址），補進選項以正確顯示
+  const yearNum = year ? Number(year) : null;
+  const yearOptions =
+    yearNum && !years.includes(yearNum) ? [yearNum, ...years] : years;
+
+  const hasFilter = !!(dept || year || month || quarter || day);
 
   const fieldClass =
     "rounded-lg border border-input bg-surface min-h-10 px-3 text-sm text-ink " +
@@ -61,14 +74,31 @@ export function ReportFilterBar({
           <label className="block text-xs font-medium text-slate-500 mb-1">
             年份
           </label>
-          <input
-            type="number"
+          <select
             name="year"
             defaultValue={year}
-            min={2000}
-            max={2100}
-            placeholder="2026"
             className={cn(fieldClass, "w-28")}
+          >
+            <option value="">全部</option>
+            {yearOptions.map((y) => (
+              <option key={y} value={y}>
+                {y}
+              </option>
+            ))}
+          </select>
+        </div>
+      )}
+
+      {showDay && (
+        <div>
+          <label className="block text-xs font-medium text-slate-500 mb-1">
+            日期
+          </label>
+          <input
+            type="date"
+            name="day"
+            defaultValue={day}
+            className={cn(fieldClass, "w-44")}
           />
         </div>
       )}
