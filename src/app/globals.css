@@ -94,6 +94,14 @@
   --radius-2xl: 0.375rem;  /* 6px（原 1rem） */
 }
 
+/* 報表頁面專用配色：收入正藍、支出正紅。
+   僅於此 scope 覆寫語意色（text-positive / text-money 及圖表 ChartStyle 皆會層疊吃到），
+   不影響全站其他頁面與 destructive（刪除／錯誤）狀態。 */
+.reports-theme {
+  --color-positive: #0000FF;  /* 收入：純正藍 */
+  --color-money: #FF0000;     /* 支出：純正紅 */
+}
+
 /* 未明確指定顏色的邊框，統一取髮絲色 */
 @layer base {
   * {

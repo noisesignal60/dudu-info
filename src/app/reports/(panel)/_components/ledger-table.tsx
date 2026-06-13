@@ -6,7 +6,7 @@ import { Pencil, Trash2, ChevronUp, ChevronDown } from "lucide-react";
 import type { LedgerEntry, LedgerSortKey } from "@/data/reports/ledger";
 import type { Department } from "@/data/reports/departments";
 import { softDeleteLedgerEntriesAction } from "@/actions/reports-ledger";
-import { formatCurrency } from "@/lib/utils";
+import { formatAmount } from "@/lib/utils";
 import { Button } from "@/ui/button";
 import { Alert } from "@/ui/alert";
 import { EmptyState } from "@/ui/empty-state";
@@ -179,10 +179,10 @@ export function LedgerTable({
                 <TableCell>{r.carOrPerson ?? "—"}</TableCell>
                 <TableCell>{r.item}</TableCell>
                 <TableCell className="text-right font-bold text-positive tabular-nums">
-                  {r.income > 0 ? formatCurrency(r.income) : "—"}
+                  {r.income > 0 ? formatAmount(r.income) : "—"}
                 </TableCell>
                 <TableCell className="text-right font-bold text-money tabular-nums">
-                  {r.expense > 0 ? formatCurrency(r.expense) : "—"}
+                  {r.expense > 0 ? formatAmount(-r.expense) : "—"}
                 </TableCell>
                 <TableCell className="max-w-[160px] truncate text-slate-600">
                   {r.note1 ?? "—"}
@@ -262,12 +262,12 @@ export function LedgerTable({
               <Mob label="車號/人名" value={r.carOrPerson ?? "—"} />
               <Mob
                 label="收入"
-                value={r.income > 0 ? formatCurrency(r.income) : "—"}
+                value={r.income > 0 ? formatAmount(r.income) : "—"}
                 tone={r.income > 0 ? "positive" : undefined}
               />
               <Mob
                 label="支出"
-                value={r.expense > 0 ? formatCurrency(r.expense) : "—"}
+                value={r.expense > 0 ? formatAmount(-r.expense) : "—"}
                 tone={r.expense > 0 ? "negative" : undefined}
               />
             </dl>

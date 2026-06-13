@@ -8,7 +8,7 @@ import {
   type ChartConfig,
 } from "@/ui/chart";
 import { EmptyState } from "@/ui/empty-state";
-import { formatCurrency } from "@/lib/utils";
+import { formatAmount } from "@/lib/utils";
 import type { DepartmentBreakdown, DeptSlice } from "@/data/reports/ledger";
 
 // 部門分類色（超過 5 個部門循環取用）
@@ -26,7 +26,7 @@ export function DepartmentPieCharts({ data }: { data: DepartmentBreakdown }) {
   return (
     <div className="grid gap-6 md:grid-cols-2">
       <PieBlock title="收入" emptyText="此期間無收入" slices={data.income} />
-      <PieBlock title="支出" emptyText="此期間無支出" slices={data.expense} />
+      <PieBlock title="支出" emptyText="此期間無支出" slices={data.expense} negative />
     </div>
   );
 }
@@ -35,10 +35,12 @@ function PieBlock({
   title,
   emptyText,
   slices,
+  negative,
 }: {
   title: string;
   emptyText: string;
   slices: DeptSlice[];
+  negative?: boolean;
 }) {
   const total = slices.reduce((s, d) => s + d.value, 0);
 
@@ -47,7 +49,9 @@ function PieBlock({
       <p className="mb-2 text-center text-sm font-semibold text-slate-700">
         {title}
         {total > 0 && (
-          <span className="ml-1 text-slate-500">（{formatCurrency(total)}）</span>
+          <span className="ml-1 text-slate-500">
+            （{formatAmount(negative ? -total : total)}）
+          </span>
         )}
       </p>
 
@@ -92,7 +96,7 @@ function PieBlock({
                 />
                 <span className="flex-1 truncate text-slate-700">{s.name}</span>
                 <span className="fig tabular-nums text-slate-900">
-                  {formatCurrency(s.value)}
+                  {formatAmount(negative ? -s.value : s.value)}
                 </span>
                 <span className="w-12 text-right tabular-nums text-slate-500">
                   {((s.value / total) * 100).toFixed(0)}%

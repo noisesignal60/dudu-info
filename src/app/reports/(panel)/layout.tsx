@@ -15,7 +15,7 @@ export default function ReportsLayout({
   children: React.ReactNode;
 }) {
   return (
-    <div className="min-h-svh bg-background">
+    <div className="reports-theme min-h-svh bg-background">
       <header className="bg-surface sticky top-0 z-30 relative">
         <div className="max-w-[1400px] mx-auto px-4 py-3 flex items-center justify-between gap-4">
           <div>

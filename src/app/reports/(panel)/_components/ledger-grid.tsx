@@ -24,7 +24,7 @@ import {
   aoaToRows,
   type GridRowInput,
 } from "@/lib/ledger-import";
-import { cn, formatCurrency } from "@/lib/utils";
+import { cn, formatAmount } from "@/lib/utils";
 import { Button } from "@/ui/button";
 import {
   SheetScroll,
@@ -951,7 +951,15 @@ export function LedgerGrid({
                               selectAll={editSelectAll}
                             />
                           ) : (
-                            <span className="block truncate">
+                            <span
+                              className={cn(
+                                "block truncate",
+                                col.field === "income" &&
+                                  "text-positive font-bold",
+                                col.field === "expense" &&
+                                  "text-money font-bold",
+                              )}
+                            >
                               {displayValue(row, col)}
                             </span>
                           )}
@@ -1134,7 +1142,8 @@ function displayValue(row: Row, col: Col): string {
     // 空字串＝未輸入 → 留白（沒用到的收入/支出欄不顯示 0）；
     // 明確輸入的 "0" 則照常顯示，不會在離開儲存格後消失。
     if (raw.trim() === "") return "";
-    return formatCurrency(num(raw));
+    const n = num(raw);
+    return formatAmount(col.field === "expense" ? -n : n);
   }
   if (col.type === "date") return formatDateSlash(raw);
   return raw;
@@ -1195,6 +1204,8 @@ function CellEditor({
   const base = cn(
     "w-full h-full bg-surface px-1 text-sm outline-none",
     col.right && "text-right",
+    col.field === "income" && "text-positive font-bold",
+    col.field === "expense" && "text-money font-bold",
   );
   const onFocus = (e: React.FocusEvent<HTMLInputElement>) => {
     if (selectAll) e.currentTarget.select();

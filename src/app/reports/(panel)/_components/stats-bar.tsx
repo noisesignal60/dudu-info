@@ -1,4 +1,4 @@
-import { formatCurrency, cn } from "@/lib/utils";
+import { formatAmount, cn } from "@/lib/utils";
 import { Card } from "@/ui/card";
 import { FitText } from "./fit-text";
 
@@ -38,7 +38,7 @@ function StatCard({
   const color = tone === "positive" ? "text-positive" : "text-money";
   const bg =
     tone === "positive"
-      ? "bg-green-50 border-green-200"
+      ? "bg-blue-50 border-blue-200"
       : "bg-red-50 border-red-200";
   return (
     <Card className={cn("p-4 min-w-0", emphasize && bg)}>
@@ -47,7 +47,7 @@ function StatCard({
         className="mt-1.5"
         textClassName={cn("fig font-black text-xl leading-none", color)}
       >
-        {(value >= 0 ? "" : "-") + formatCurrency(Math.abs(value))}
+        {formatAmount(tone === "negative" ? -Math.abs(value) : value)}
       </FitText>
     </Card>
   );

@@ -1,5 +1,5 @@
 import type { LedgerAggregateRow } from "@/data/reports/ledger";
-import { formatCurrency, cn } from "@/lib/utils";
+import { formatAmount, cn } from "@/lib/utils";
 import { EmptyState } from "@/ui/empty-state";
 import {
   SheetScroll,
@@ -44,10 +44,10 @@ export function AggregateTable({ rows }: { rows: LedgerAggregateRow[] }) {
                 {r.label}
               </SheetCell>
               <SheetCell className="text-right font-bold text-positive">
-                {formatCurrency(r.income)}
+                {formatAmount(r.income)}
               </SheetCell>
               <SheetCell className="text-right font-bold text-money">
-                {formatCurrency(r.expense)}
+                {formatAmount(-r.expense)}
               </SheetCell>
               <SheetCell
                 className={cn(
@@ -56,7 +56,7 @@ export function AggregateTable({ rows }: { rows: LedgerAggregateRow[] }) {
                 )}
               >
                 {r.net >= 0 ? "" : "-"}
-                {formatCurrency(Math.abs(r.net))}
+                {formatAmount(Math.abs(r.net))}
               </SheetCell>
             </tr>
           ))}
@@ -68,10 +68,10 @@ export function AggregateTable({ rows }: { rows: LedgerAggregateRow[] }) {
               合計
             </SheetCell>
             <SheetCell className="bg-canvas text-right font-bold text-positive">
-              {formatCurrency(totalIncome)}
+              {formatAmount(totalIncome)}
             </SheetCell>
             <SheetCell className="bg-canvas text-right font-bold text-money">
-              {formatCurrency(totalExpense)}
+              {formatAmount(-totalExpense)}
             </SheetCell>
             <SheetCell
               className={cn(
@@ -80,7 +80,7 @@ export function AggregateTable({ rows }: { rows: LedgerAggregateRow[] }) {
               )}
             >
               {totalNet >= 0 ? "" : "-"}
-              {formatCurrency(Math.abs(totalNet))}
+              {formatAmount(Math.abs(totalNet))}
             </SheetCell>
           </tr>
         </tfoot>

@@ -10,6 +10,11 @@ export function formatCurrency(value: number | null | undefined): string {
   return `$${n.toLocaleString("zh-TW")}`;
 }
 
+/** 純數字金額（千分位、無貨幣符號）。報表帳簿用，避免大字體下 $ 占位干擾。 */
+export function formatAmount(value: number | null | undefined): string {
+  return Number(value ?? 0).toLocaleString("zh-TW");
+}
+
 export function formatDateTime(value: string | Date | null | undefined): string {
   if (!value) return "—";
   const d = typeof value === "string" ? new Date(value) : value;
