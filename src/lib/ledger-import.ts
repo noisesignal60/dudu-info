@@ -14,8 +14,7 @@ export const IMPORT_COLUMNS = [
   "部門名稱",
   "車號/人名",
   "項目",
-  "收入",
-  "支出",
+  "金額",
   "備註1",
   "備註2",
 ] as const;
@@ -26,8 +25,7 @@ export const ROW_FIELDS = [
   "departmentName",
   "carOrPerson",
   "item",
-  "income",
-  "expense",
+  "amount",
   "note1",
   "note2",
 ] as const;
@@ -39,8 +37,7 @@ export type GridRowInput = {
   departmentName: string;
   carOrPerson: string;
   item: string;
-  income: string;
-  expense: string;
+  amount: string; // 帶正負號：正＝收入、負＝支出
   note1: string;
   note2: string;
 };
@@ -82,7 +79,7 @@ export function parseAmount(value: unknown): string {
 /** 依欄位型別正規化單一儲存格的原始字串（供逐格貼上使用）。 */
 export function normalizeField(field: RowField, raw: string): string {
   if (field === "entryDate") return normalizeDate(raw);
-  if (field === "income" || field === "expense") return parseAmount(raw);
+  if (field === "amount") return parseAmount(raw);
   return raw.trim();
 }
 
@@ -110,10 +107,9 @@ export function cellsToRow(cells: unknown[]): GridRowInput {
     departmentName: text(1),
     carOrPerson: text(2),
     item: text(3),
-    income: parseAmount(cells[4]),
-    expense: parseAmount(cells[5]),
-    note1: text(6),
-    note2: text(7),
+    amount: parseAmount(cells[4]),
+    note1: text(5),
+    note2: text(6),
   };
 }
 

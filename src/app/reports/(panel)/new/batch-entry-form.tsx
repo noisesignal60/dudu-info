@@ -34,8 +34,7 @@ type Row = {
   departmentId: string;
   carOrPerson: string;
   item: string;
-  income: string;
-  expense: string;
+  amount: string; // 帶正負號：正＝收入、負＝支出
   note1: string;
   note2: string;
 };
@@ -99,11 +98,18 @@ function makeRow(initial?: Partial<Row>): Row {
     departmentId: initial?.departmentId ?? "",
     carOrPerson: initial?.carOrPerson ?? "",
     item: initial?.item ?? "",
-    income: initial?.income ?? "",
-    expense: initial?.expense ?? "",
+    amount: initial?.amount ?? "",
     note1: initial?.note1 ?? "",
     note2: initial?.note2 ?? "",
   };
+}
+
+/** 金額欄文字色：正＝收入（藍）、負＝支出（紅）、零或空＝預設。 */
+function amountToneCls(raw: string): string {
+  const n = Number(raw) || 0;
+  if (n > 0) return "text-positive font-bold";
+  if (n < 0) return "text-money font-bold";
+  return "";
 }
 
 export function BatchEntryForm({
@@ -181,8 +187,7 @@ export function BatchEntryForm({
       (r) =>
         r.item.trim() ||
         r.carOrPerson.trim() ||
-        Number(r.income) > 0 ||
-        Number(r.expense) > 0,
+        Number(r.amount) !== 0,
     );
     if (nonEmpty.length === 0) {
       setFlash({ ok: false, msg: "沒有可送出的記錄" });
@@ -210,8 +215,7 @@ export function BatchEntryForm({
       departmentId: r.departmentId,
       carOrPerson: r.carOrPerson || undefined,
       item: r.item,
-      income: Number(r.income) || 0,
-      expense: Number(r.expense) || 0,
+      amount: Number(r.amount) || 0,
       note1: r.note1 || undefined,
       note2: r.note2 || undefined,
     }));
@@ -279,7 +283,7 @@ export function BatchEntryForm({
       </div>
 
       <Alert variant="warning">
-        提示：收入請填正數，支出請填正數。系統自動以欄位區分。所有變更會自動暫存到本機。
+        提示：金額欄收入填正數、支出填負數，系統會自動分類。所有變更會自動暫存到本機。
       </Alert>
 
       {/* 多列輸入 — 桌機：表格 */}
@@ -292,8 +296,7 @@ export function BatchEntryForm({
                 <Th>部門名稱 *</Th>
                 <Th>車號/人名</Th>
                 <Th>項目 *</Th>
-                <Th align="right">收入</Th>
-                <Th align="right">支出</Th>
+                <Th align="right">金額</Th>
                 <Th>備註1</Th>
                 <Th>備註2</Th>
                 <Th align="right">操作</Th>
@@ -352,24 +355,10 @@ export function BatchEntryForm({
                     <input
                       type="number"
                       step="0.01"
-                      value={row.income}
-                      onChange={(e) => update(idx, { income: e.target.value })}
+                      value={row.amount}
+                      onChange={(e) => update(idx, { amount: e.target.value })}
                       className={cellInput(
-                        "w-24 text-right text-positive font-bold",
-                      )}
-                      placeholder="0"
-                    />
-                  </Td>
-                  <Td className="p-1.5">
-                    <input
-                      type="number"
-                      step="0.01"
-                      value={row.expense}
-                      onChange={(e) =>
-                        update(idx, { expense: e.target.value })
-                      }
-                      className={cellInput(
-                        "w-24 text-right text-money font-bold",
+                        cn("w-28 text-right", amountToneCls(row.amount)),
                       )}
                       placeholder="0"
                     />
@@ -471,28 +460,18 @@ export function BatchEntryForm({
                 className={cellInput("w-full")}
               />
             </CardField>
-            <div className="grid grid-cols-2 gap-3">
-              <CardField label="收入">
-                <input
-                  type="number"
-                  step="0.01"
-                  value={row.income}
-                  onChange={(e) => update(idx, { income: e.target.value })}
-                  className={cellInput("w-full text-right text-positive font-bold")}
-                  placeholder="0"
-                />
-              </CardField>
-              <CardField label="支出">
-                <input
-                  type="number"
-                  step="0.01"
-                  value={row.expense}
-                  onChange={(e) => update(idx, { expense: e.target.value })}
-                  className={cellInput("w-full text-right text-money font-bold")}
-                  placeholder="0"
-                />
-              </CardField>
-            </div>
+            <CardField label="金額（收入正數、支出負數）">
+              <input
+                type="number"
+                step="0.01"
+                value={row.amount}
+                onChange={(e) => update(idx, { amount: e.target.value })}
+                className={cellInput(
+                  cn("w-full text-right", amountToneCls(row.amount)),
+                )}
+                placeholder="0"
+              />
+            </CardField>
             <div className="grid grid-cols-2 gap-3">
               <CardField label="備註1">
                 <input

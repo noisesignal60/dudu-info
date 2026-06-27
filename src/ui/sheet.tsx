@@ -63,7 +63,7 @@ export function SheetHeadCell({
     <th
       data-slot="sheet-head-cell"
       className={cn(
-        "border border-hairline bg-canvas px-2 py-1.5 text-center text-xs font-semibold " +
+        "relative border border-hairline bg-canvas px-2 py-1.5 text-center text-xs font-semibold " +
           "uppercase tracking-[0.04em] text-slate-500 whitespace-nowrap",
         className,
       )}
@@ -78,7 +78,7 @@ export function SheetCorner({ className, ...props }: React.ComponentProps<"th">)
     <th
       data-slot="sheet-corner"
       className={cn(
-        "sticky left-0 z-30 w-12 border border-hairline bg-canvas px-2 py-1.5 " +
+        "relative sticky left-0 z-30 w-12 border border-hairline bg-canvas px-2 py-1.5 " +
           "text-center text-xs font-semibold text-slate-400",
         className,
       )}
@@ -93,7 +93,7 @@ export function SheetRowNum({ className, ...props }: React.ComponentProps<"td">)
     <td
       data-slot="sheet-rownum"
       className={cn(
-        "sticky left-0 z-10 w-12 border border-hairline bg-canvas px-1 py-1 " +
+        "relative sticky left-0 z-10 w-12 border border-hairline bg-canvas px-1 py-1 " +
           "text-center text-xs text-slate-400 select-none",
         className,
       )}
@@ -119,3 +119,51 @@ export const sheetActiveCls =
 
 /** 驗證未過的儲存格（紅底紅字，使用 money token）。 */
 export const sheetInvalidCls = "bg-money/10 text-money";
+
+/**
+ * 欄寬拖移把手：放在表頭格右緣（SheetHeadCell 需 relative，已內建）。
+ * 滑過/拖動時以 brand 提示。
+ */
+export function SheetColResizer({
+  className,
+  ...props
+}: React.ComponentProps<"span">) {
+  return (
+    <span
+      data-slot="sheet-col-resizer"
+      role="separator"
+      aria-orientation="vertical"
+      aria-label="調整欄寬"
+      className={cn(
+        "absolute top-0 right-0 z-10 h-full w-1.5 cursor-col-resize touch-none select-none",
+        "hover:bg-brand/40 active:bg-brand",
+        className,
+      )}
+      {...props}
+    />
+  );
+}
+
+/**
+ * 列高拖移把手：放在列號格下緣（SheetRowNum 需 relative，已內建）。
+ * 滑過/拖動時以 brand 提示。
+ */
+export function SheetRowResizer({
+  className,
+  ...props
+}: React.ComponentProps<"span">) {
+  return (
+    <span
+      data-slot="sheet-row-resizer"
+      role="separator"
+      aria-orientation="horizontal"
+      aria-label="調整列高"
+      className={cn(
+        "absolute bottom-0 left-0 z-10 h-1.5 w-full cursor-row-resize touch-none select-none",
+        "hover:bg-brand/40 active:bg-brand",
+        className,
+      )}
+      {...props}
+    />
+  );
+}

@@ -25,6 +25,8 @@ import {
   type GridRowInput,
 } from "@/lib/ledger-import";
 import { cn, formatAmount } from "@/lib/utils";
+import { toSignedAmount } from "@/lib/ledger-amount";
+import { useSheetResize } from "@/lib/use-sheet-resize";
 import { Button } from "@/ui/button";
 import {
   SheetScroll,
@@ -34,6 +36,8 @@ import {
   SheetCorner,
   SheetRowNum,
   SheetCell,
+  SheetColResizer,
+  SheetRowResizer,
   sheetActiveCls,
   sheetInvalidCls,
 } from "@/ui/sheet";
@@ -55,11 +59,19 @@ const COLS: Col[] = [
   { field: "departmentName", label: "部門名稱", type: "dept", width: 120 },
   { field: "carOrPerson", label: "車號/人名", type: "text", width: 120 },
   { field: "item", label: "項目", type: "text", width: 168 },
-  { field: "income", label: "收入", type: "number", width: 112, right: true },
-  { field: "expense", label: "支出", type: "number", width: 112, right: true },
+  { field: "amount", label: "金額", type: "number", width: 124, right: true },
   { field: "note1", label: "備註1", type: "text", width: 132 },
   { field: "note2", label: "備註2", type: "text", width: 132 },
 ];
+
+/** 各欄預設寬度，供拖移調整的初始值與「重設」基準。 */
+const DEFAULT_WIDTHS: Record<string, number> = Object.fromEntries(
+  COLS.map((c) => [c.field, c.width]),
+);
+/** 列號欄（#）固定寬。 */
+const ROWNUM_W = 64;
+/** 列預設高度（px）。 */
+const DEFAULT_ROW_HEIGHT = 36;
 
 type Row = {
   key: string;
@@ -68,8 +80,7 @@ type Row = {
   departmentName: string;
   carOrPerson: string;
   item: string;
-  income: string;
-  expense: string;
+  amount: string; // 帶正負號：正＝收入、負＝支出
   note1: string;
   note2: string;
 };
@@ -79,8 +90,7 @@ type Norm = {
   departmentId: string;
   carOrPerson: string;
   item: string;
-  income: number;
-  expense: number;
+  amount: number;
   note1: string;
   note2: string;
 };
@@ -154,14 +164,14 @@ function makeRow(initial?: Partial<Row>): Row {
     departmentName: initial?.departmentName ?? "",
     carOrPerson: initial?.carOrPerson ?? "",
     item: initial?.item ?? "",
-    income: initial?.income ?? "",
-    expense: initial?.expense ?? "",
+    amount: initial?.amount ?? "",
     note1: initial?.note1 ?? "",
     note2: initial?.note2 ?? "",
   };
 }
 
 function entryToRow(e: LedgerEntry): Row {
+  const amount = toSignedAmount(e.income, e.expense);
   return {
     key: e.id,
     id: e.id,
@@ -169,8 +179,7 @@ function entryToRow(e: LedgerEntry): Row {
     departmentName: e.departmentName ?? "",
     carOrPerson: e.carOrPerson ?? "",
     item: e.item,
-    income: e.income ? String(e.income) : "",
-    expense: e.expense ? String(e.expense) : "",
+    amount: amount ? String(amount) : "",
     note1: e.note1 ?? "",
     note2: e.note2 ?? "",
   };
@@ -182,8 +191,7 @@ function inputToRow(g: GridRowInput): Row {
     departmentName: g.departmentName,
     carOrPerson: g.carOrPerson,
     item: g.item,
-    income: g.income,
-    expense: g.expense,
+    amount: g.amount,
     note1: g.note1,
     note2: g.note2,
   });
@@ -201,8 +209,7 @@ function buildBaseline(entries: LedgerEntry[]): Map<string, Norm> {
       departmentId: e.departmentId,
       carOrPerson: e.carOrPerson ?? "",
       item: e.item,
-      income: e.income,
-      expense: e.expense,
+      amount: toSignedAmount(e.income, e.expense),
       note1: e.note1 ?? "",
       note2: e.note2 ?? "",
     });
@@ -219,8 +226,7 @@ function isMeaningful(r: Row): boolean {
   return Boolean(
     r.item.trim() ||
       r.carOrPerson.trim() ||
-      num(r.income) > 0 ||
-      num(r.expense) > 0 ||
+      num(r.amount) !== 0 ||
       r.note1.trim() ||
       r.note2.trim(),
   );
@@ -232,8 +238,7 @@ function normOf(r: Row, deptId: string): Norm {
     departmentId: deptId,
     carOrPerson: r.carOrPerson.trim(),
     item: r.item.trim(),
-    income: num(r.income),
-    expense: num(r.expense),
+    amount: num(r.amount),
     note1: r.note1.trim(),
     note2: r.note2.trim(),
   };
@@ -245,8 +250,7 @@ function sameNorm(a: Norm, b: Norm): boolean {
     a.departmentId === b.departmentId &&
     a.carOrPerson === b.carOrPerson &&
     a.item === b.item &&
-    a.income === b.income &&
-    a.expense === b.expense &&
+    a.amount === b.amount &&
     a.note1 === b.note1 &&
     a.note2 === b.note2
   );
@@ -325,6 +329,20 @@ export function LedgerGrid({
   const gridRef = useRef<HTMLDivElement>(null);
   const editBackupRef = useRef<string>("");
   const fileRef = useRef<HTMLInputElement>(null);
+
+  // Excel 式逐欄寬／逐列高（記在 localStorage）
+  const {
+    widths,
+    totalWidth,
+    getRowHeight,
+    startColResize,
+    startRowResize,
+    reset: resetSizes,
+  } = useSheetResize({
+    storageKey: "sheet-size:ledger-grid",
+    defaultWidths: DEFAULT_WIDTHS,
+    defaultRowHeight: DEFAULT_ROW_HEIGHT,
+  });
 
   // 伺服器資料更新（儲存後 router.refresh()）時重新載入，並重建 baseline
   useEffect(() => {
@@ -726,8 +744,7 @@ export function LedgerGrid({
         departmentId: cur.departmentId,
         carOrPerson: cur.carOrPerson || undefined,
         item: cur.item,
-        income: cur.income,
-        expense: cur.expense,
+        amount: cur.amount,
         note1: cur.note1 || undefined,
         note2: cur.note2 || undefined,
       };
@@ -809,6 +826,14 @@ export function LedgerGrid({
         </Button>
         <Button
           type="button"
+          variant="secondary"
+          size="sm"
+          onClick={resetSizes}
+        >
+          重設欄列大小
+        </Button>
+        <Button
+          type="button"
           variant="danger"
           size="sm"
           onClick={removeSelected}
@@ -852,10 +877,21 @@ export function LedgerGrid({
           onPaste={onPaste}
           className="outline-none"
         >
-          <SheetTable>
+          <SheetTable
+            style={{ width: ROWNUM_W + totalWidth, tableLayout: "fixed" }}
+          >
+            <colgroup>
+              <col style={{ width: ROWNUM_W }} />
+              {COLS.map((col) => (
+                <col
+                  key={col.field}
+                  style={{ width: widths[col.field] ?? col.width }}
+                />
+              ))}
+            </colgroup>
             <SheetHead>
               <tr>
-                <SheetCorner className="w-16">
+                <SheetCorner>
                   <div className="flex items-center justify-center gap-1.5">
                     <input
                       type="checkbox"
@@ -871,8 +907,11 @@ export function LedgerGrid({
                   </div>
                 </SheetCorner>
                 {COLS.map((col) => (
-                  <SheetHeadCell key={col.field} style={{ width: col.width }}>
+                  <SheetHeadCell key={col.field}>
                     {col.label}
+                    <SheetColResizer
+                      onPointerDown={(e) => startColResize(col.field, e)}
+                    />
                   </SheetHeadCell>
                 ))}
               </tr>
@@ -881,8 +920,8 @@ export function LedgerGrid({
               {state.present.map((row, r) => {
                 const problem = rowProblem(row);
                 return (
-                  <tr key={row.key}>
-                    <SheetRowNum className="w-16">
+                  <tr key={row.key} style={{ height: getRowHeight(row.key) }}>
+                    <SheetRowNum>
                       <div className="flex items-center justify-center gap-1.5">
                         <input
                           type="checkbox"
@@ -893,6 +932,9 @@ export function LedgerGrid({
                         />
                         <span>{r + 1}</span>
                       </div>
+                      <SheetRowResizer
+                        onPointerDown={(e) => startRowResize(row.key, e)}
+                      />
                     </SheetRowNum>
                     {COLS.map((col, c) => {
                       const isActive = active?.r === r && active?.c === c;
@@ -905,11 +947,10 @@ export function LedgerGrid({
                             key={col.field}
                             onClick={() => selectCell(r, c)}
                             className={cn(
-                              "h-9 p-0",
+                              "p-0",
                               invalid && sheetInvalidCls,
                               isActive && sheetActiveCls,
                             )}
-                            style={{ width: col.width }}
                           >
                             <DeptCellSelect
                               value={row.departmentName}
@@ -933,13 +974,12 @@ export function LedgerGrid({
                           onClick={() => selectCell(r, c)}
                           onDoubleClick={() => enterEdit(r, c)}
                           className={cn(
-                            "h-9 cursor-cell",
+                            "cursor-cell",
                             col.right && "text-right",
                             // 編輯中不套紅底，避免打字過程的半成品閃紅
                             invalid && !isEditing && sheetInvalidCls,
                             isActive && sheetActiveCls,
                           )}
-                          style={{ width: col.width }}
                         >
                           {isEditing ? (
                             <CellEditor
@@ -954,10 +994,8 @@ export function LedgerGrid({
                             <span
                               className={cn(
                                 "block truncate",
-                                col.field === "income" &&
-                                  "text-positive font-bold",
-                                col.field === "expense" &&
-                                  "text-money font-bold",
+                                col.field === "amount" &&
+                                  amountToneCls(num(row.amount)),
                               )}
                             >
                               {displayValue(row, col)}
@@ -1054,34 +1092,19 @@ export function LedgerGrid({
                   className={mobileInput(problem === "item")}
                 />
               </CardField>
-              <div className="grid grid-cols-2 gap-3">
-                <CardField label="收入">
-                  <input
-                    type="number"
-                    step="0.01"
-                    value={row.income}
-                    placeholder="0"
-                    onChange={(e) => update(idx, { income: e.target.value })}
-                    className={mobileInput(
-                      false,
-                      "text-right text-positive font-bold",
-                    )}
-                  />
-                </CardField>
-                <CardField label="支出">
-                  <input
-                    type="number"
-                    step="0.01"
-                    value={row.expense}
-                    placeholder="0"
-                    onChange={(e) => update(idx, { expense: e.target.value })}
-                    className={mobileInput(
-                      false,
-                      "text-right text-money font-bold",
-                    )}
-                  />
-                </CardField>
-              </div>
+              <CardField label="金額（收入正數、支出負數）">
+                <input
+                  type="number"
+                  step="0.01"
+                  value={row.amount}
+                  placeholder="0"
+                  onChange={(e) => update(idx, { amount: e.target.value })}
+                  className={mobileInput(
+                    false,
+                    cn("text-right", amountToneCls(num(row.amount))),
+                  )}
+                />
+              </CardField>
               <div className="grid grid-cols-2 gap-3">
                 <CardField label="備註1">
                   <input
@@ -1136,14 +1159,21 @@ function parseDateInput(raw: string): string {
   return "";
 }
 
+/** 金額欄文字色：正＝收入（藍）、負＝支出（紅）、零或空＝預設色。 */
+function amountToneCls(n: number): string {
+  if (n > 0) return "text-positive font-bold";
+  if (n < 0) return "text-money font-bold";
+  return "";
+}
+
 function displayValue(row: Row, col: Col): string {
   const raw = row[col.field];
   if (col.type === "number") {
-    // 空字串＝未輸入 → 留白（沒用到的收入/支出欄不顯示 0）；
+    // 空字串＝未輸入 → 留白（沒填金額的列不顯示 0）；
     // 明確輸入的 "0" 則照常顯示，不會在離開儲存格後消失。
     if (raw.trim() === "") return "";
-    const n = num(raw);
-    return formatAmount(col.field === "expense" ? -n : n);
+    // amount 已是帶正負號金額，formatAmount 會自帶負號
+    return formatAmount(num(raw));
   }
   if (col.type === "date") return formatDateSlash(raw);
   return raw;
@@ -1204,8 +1234,7 @@ function CellEditor({
   const base = cn(
     "w-full h-full bg-surface px-1 text-sm outline-none",
     col.right && "text-right",
-    col.field === "income" && "text-positive font-bold",
-    col.field === "expense" && "text-money font-bold",
+    col.field === "amount" && amountToneCls(num(value)),
   );
   const onFocus = (e: React.FocusEvent<HTMLInputElement>) => {
     if (selectAll) e.currentTarget.select();

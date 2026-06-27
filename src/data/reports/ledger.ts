@@ -25,10 +25,8 @@ export type LedgerSortKey =
   | "department.desc"
   | "car.asc"
   | "car.desc"
-  | "income.asc"
-  | "income.desc"
-  | "expense.asc"
-  | "expense.desc"
+  | "amount.asc"
+  | "amount.desc"
   | "sort.asc";
 
 export type LedgerListParams = {
@@ -58,10 +56,9 @@ const SORT_MAP: Record<LedgerSortKey, { col: string; asc: boolean }> = {
   "department.desc": { col: "department_id", asc: false },
   "car.asc": { col: "car_or_person", asc: true },
   "car.desc": { col: "car_or_person", asc: false },
-  "income.asc": { col: "income", asc: true },
-  "income.desc": { col: "income", asc: false },
-  "expense.asc": { col: "expense", asc: true },
-  "expense.desc": { col: "expense", asc: false },
+  // 帶正負號淨額（DB 衍生欄 amount = income - expense）
+  "amount.asc": { col: "amount", asc: true },
+  "amount.desc": { col: "amount", asc: false },
   "sort.asc": { col: "sort_order", asc: true },
 };
 

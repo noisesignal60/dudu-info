@@ -9,6 +9,7 @@ import {
 } from "@/actions/reports-ledger";
 import type { LedgerEntry } from "@/data/reports/ledger";
 import type { Department } from "@/data/reports/departments";
+import { toSignedAmount } from "@/lib/ledger-amount";
 import { Button } from "@/ui/button";
 import { Input } from "@/ui/input";
 import { Label } from "@/ui/label";
@@ -86,7 +87,7 @@ export function LedgerEntryModal({
         </DialogHeader>
 
         <Alert variant="warning">
-          收入請填正數，支出請填正數（系統會分別記在收入/支出欄）
+          金額欄收入填正數、支出填負數，系統會自動分類
         </Alert>
 
         <form action={formAction} className="space-y-3">
@@ -134,24 +135,16 @@ export function LedgerEntryModal({
           />
           <FieldError state={state} field="item" />
 
-          <div className="grid grid-cols-2 gap-3">
-            <Field
-              label="收入"
-              name="income"
-              type="number"
-              step="0.01"
-              defaultValue={entry ? String(entry.income) : "0"}
-            />
-            <Field
-              label="支出"
-              name="expense"
-              type="number"
-              step="0.01"
-              defaultValue={entry ? String(entry.expense) : "0"}
-            />
-          </div>
-          <FieldError state={state} field="income" />
-          <FieldError state={state} field="expense" />
+          <Field
+            label="金額（收入正數、支出負數）"
+            name="amount"
+            type="number"
+            step="0.01"
+            defaultValue={
+              entry ? String(toSignedAmount(entry.income, entry.expense)) : "0"
+            }
+          />
+          <FieldError state={state} field="amount" />
 
           <Field label="備註1" name="note1" defaultValue={entry?.note1 ?? ""} />
           <Field label="備註2" name="note2" defaultValue={entry?.note2 ?? ""} />

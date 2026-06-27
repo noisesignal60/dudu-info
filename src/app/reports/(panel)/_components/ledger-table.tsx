@@ -20,7 +20,7 @@ import {
 } from "@/ui/table";
 import { LedgerEntryModal } from "./ledger-modal";
 
-type SortField = "date" | "department" | "car" | "income" | "expense";
+type SortField = "date" | "department" | "car" | "amount";
 
 export function LedgerTable({
   rows,
@@ -142,14 +142,8 @@ export function LedgerTable({
               />
               <TableHead>項目</TableHead>
               <SortableTh
-                field="income"
-                label="收入"
-                basePath={basePath}
-                current={currentSort}
-              />
-              <SortableTh
-                field="expense"
-                label="支出"
+                field="amount"
+                label="金額"
                 basePath={basePath}
                 current={currentSort}
               />
@@ -178,12 +172,7 @@ export function LedgerTable({
                 </TableCell>
                 <TableCell>{r.carOrPerson ?? "—"}</TableCell>
                 <TableCell>{r.item}</TableCell>
-                <TableCell className="text-right font-bold text-positive tabular-nums">
-                  {r.income > 0 ? formatAmount(r.income) : "—"}
-                </TableCell>
-                <TableCell className="text-right font-bold text-money tabular-nums">
-                  {r.expense > 0 ? formatAmount(-r.expense) : "—"}
-                </TableCell>
+                <AmountCell income={r.income} expense={r.expense} />
                 <TableCell className="max-w-[160px] truncate text-slate-600">
                   {r.note1 ?? "—"}
                 </TableCell>
@@ -261,14 +250,19 @@ export function LedgerTable({
             <dl className="grid grid-cols-2 gap-2 text-sm">
               <Mob label="車號/人名" value={r.carOrPerson ?? "—"} />
               <Mob
-                label="收入"
-                value={r.income > 0 ? formatAmount(r.income) : "—"}
-                tone={r.income > 0 ? "positive" : undefined}
-              />
-              <Mob
-                label="支出"
-                value={r.expense > 0 ? formatAmount(-r.expense) : "—"}
-                tone={r.expense > 0 ? "negative" : undefined}
+                label="金額"
+                value={
+                  r.income - r.expense !== 0
+                    ? formatAmount(r.income - r.expense)
+                    : "—"
+                }
+                tone={
+                  r.income - r.expense > 0
+                    ? "positive"
+                    : r.income - r.expense < 0
+                      ? "negative"
+                      : undefined
+                }
               />
             </dl>
             {(r.note1 || r.note2) && (
@@ -292,6 +286,18 @@ export function LedgerTable({
         />
       )}
     </>
+  );
+}
+
+/** 帳簿明細的「金額」欄：正＝收入（藍）、負＝支出（紅）、零＝灰「—」。 */
+function AmountCell({ income, expense }: { income: number; expense: number }) {
+  const net = income - expense;
+  const tone =
+    net > 0 ? "text-positive" : net < 0 ? "text-money" : "text-slate-400";
+  return (
+    <TableCell className={`text-right font-bold tabular-nums ${tone}`}>
+      {net !== 0 ? formatAmount(net) : "—"}
+    </TableCell>
   );
 }
 

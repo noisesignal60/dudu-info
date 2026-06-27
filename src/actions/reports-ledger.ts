@@ -4,6 +4,7 @@ import { updateTag } from "next/cache";
 import { z } from "zod";
 import { getCurrentAdmin } from "@/lib/admin-session";
 import { supabaseAdmin } from "@/lib/supabase/admin";
+import { splitAmount } from "@/lib/ledger-amount";
 
 export type LedgerFormState =
   | { ok: false; error?: string; fieldErrors?: Record<string, string> }
@@ -29,8 +30,8 @@ const EntrySchema = z.object({
   departmentId: z.string().uuid("請選擇部門"),
   carOrPerson: z.string().trim().max(50).optional().default(""),
   item: z.string().trim().min(1, "請輸入項目").max(100),
-  income: z.coerce.number().min(0, "收入請填正數").default(0),
-  expense: z.coerce.number().min(0, "支出請填正數").default(0),
+  // 單一帶正負號金額：正＝收入、負＝支出，儲存時再拆回 income / expense
+  amount: z.coerce.number().default(0),
   note1: z.string().trim().max(200).optional().default(""),
   note2: z.string().trim().max(200).optional().default(""),
 });
@@ -45,8 +46,7 @@ export async function createLedgerEntryAction(
     departmentId: formData.get("departmentId"),
     carOrPerson: formData.get("carOrPerson"),
     item: formData.get("item"),
-    income: formData.get("income") || 0,
-    expense: formData.get("expense") || 0,
+    amount: formData.get("amount") || 0,
     note1: formData.get("note1"),
     note2: formData.get("note2"),
   });
@@ -54,6 +54,7 @@ export async function createLedgerEntryAction(
     return { ok: false, fieldErrors: flatten(parsed.error) };
   }
   const d = parsed.data;
+  const { income, expense } = splitAmount(d.amount);
 
   const db = supabaseAdmin();
   const { error } = await db.from("ledger_entries").insert({
@@ -61,8 +62,8 @@ export async function createLedgerEntryAction(
     department_id: d.departmentId,
     car_or_person: d.carOrPerson || null,
     item: d.item,
-    income: d.income,
-    expense: d.expense,
+    income,
+    expense,
     note1: d.note1 || null,
     note2: d.note2 || null,
     created_by: adminId,
@@ -84,8 +85,7 @@ export async function updateLedgerEntryAction(
     departmentId: formData.get("departmentId"),
     carOrPerson: formData.get("carOrPerson"),
     item: formData.get("item"),
-    income: formData.get("income") || 0,
-    expense: formData.get("expense") || 0,
+    amount: formData.get("amount") || 0,
     note1: formData.get("note1"),
     note2: formData.get("note2"),
   });
@@ -93,6 +93,7 @@ export async function updateLedgerEntryAction(
     return { ok: false, fieldErrors: flatten(parsed.error) };
   }
   const d = parsed.data;
+  const { income, expense } = splitAmount(d.amount);
 
   const db = supabaseAdmin();
   const { error } = await db
@@ -102,8 +103,8 @@ export async function updateLedgerEntryAction(
       department_id: d.departmentId,
       car_or_person: d.carOrPerson || null,
       item: d.item,
-      income: d.income,
-      expense: d.expense,
+      income,
+      expense,
       note1: d.note1 || null,
       note2: d.note2 || null,
     })
@@ -123,8 +124,7 @@ export type BatchRow = {
   departmentId: string;
   carOrPerson?: string;
   item: string;
-  income?: number;
-  expense?: number;
+  amount?: number; // 帶正負號：正＝收入、負＝支出
   note1?: string;
   note2?: string;
 };
@@ -144,8 +144,7 @@ export async function createLedgerBatchAction(
       departmentId: r.departmentId,
       carOrPerson: r.carOrPerson ?? "",
       item: r.item,
-      income: r.income ?? 0,
-      expense: r.expense ?? 0,
+      amount: r.amount ?? 0,
       note1: r.note1 ?? "",
       note2: r.note2 ?? "",
     })),
@@ -157,17 +156,20 @@ export async function createLedgerBatchAction(
   }
 
   const db = supabaseAdmin();
-  const payload = parsed.data.map((d) => ({
-    entry_date: d.entryDate,
-    department_id: d.departmentId,
-    car_or_person: d.carOrPerson || null,
-    item: d.item,
-    income: d.income,
-    expense: d.expense,
-    note1: d.note1 || null,
-    note2: d.note2 || null,
-    created_by: adminId,
-  }));
+  const payload = parsed.data.map((d) => {
+    const { income, expense } = splitAmount(d.amount);
+    return {
+      entry_date: d.entryDate,
+      department_id: d.departmentId,
+      car_or_person: d.carOrPerson || null,
+      item: d.item,
+      income,
+      expense,
+      note1: d.note1 || null,
+      note2: d.note2 || null,
+      created_by: adminId,
+    };
+  });
 
   const { error, data } = await db.from("ledger_entries").insert(payload).select("id");
   if (error) return { ok: false, error: error.message };
@@ -207,8 +209,7 @@ export async function saveLedgerGridAction(input: {
       departmentId: u.departmentId,
       carOrPerson: u.carOrPerson ?? "",
       item: u.item,
-      income: u.income ?? 0,
-      expense: u.expense ?? 0,
+      amount: u.amount ?? 0,
       note1: u.note1 ?? "",
       note2: u.note2 ?? "",
     });
@@ -226,17 +227,20 @@ export async function saveLedgerGridAction(input: {
   const toInsert = validated.filter((v) => !v.id);
   let inserted = 0;
   if (toInsert.length) {
-    const payload = toInsert.map((v) => ({
-      entry_date: v.row.entryDate,
-      department_id: v.row.departmentId,
-      car_or_person: v.row.carOrPerson || null,
-      item: v.row.item,
-      income: v.row.income,
-      expense: v.row.expense,
-      note1: v.row.note1 || null,
-      note2: v.row.note2 || null,
-      created_by: adminId,
-    }));
+    const payload = toInsert.map((v) => {
+      const { income, expense } = splitAmount(v.row.amount);
+      return {
+        entry_date: v.row.entryDate,
+        department_id: v.row.departmentId,
+        car_or_person: v.row.carOrPerson || null,
+        item: v.row.item,
+        income,
+        expense,
+        note1: v.row.note1 || null,
+        note2: v.row.note2 || null,
+        created_by: adminId,
+      };
+    });
     const { data, error } = await db
       .from("ledger_entries")
       .insert(payload)
@@ -252,6 +256,7 @@ export async function saveLedgerGridAction(input: {
   const toUpdate = validated.filter((v) => v.id);
   let updated = 0;
   for (const v of toUpdate) {
+    const { income, expense } = splitAmount(v.row.amount);
     const { error } = await db
       .from("ledger_entries")
       .update({
@@ -259,8 +264,8 @@ export async function saveLedgerGridAction(input: {
         department_id: v.row.departmentId,
         car_or_person: v.row.carOrPerson || null,
         item: v.row.item,
-        income: v.row.income,
-        expense: v.row.expense,
+        income,
+        expense,
         note1: v.row.note1 || null,
         note2: v.row.note2 || null,
       })
@@ -352,8 +357,7 @@ export async function exportLedgerCsvAction(filters: {
     "部門名稱",
     "車號/人名",
     "項目",
-    "收入",
-    "支出",
+    "金額",
     "備註1",
     "備註2",
   ];
@@ -369,8 +373,8 @@ export async function exportLedgerCsvAction(filters: {
       dept?.name ?? "",
       r.car_or_person ?? "",
       r.item,
-      r.income,
-      r.expense,
+      // 帶正負號金額：正＝收入、負＝支出
+      (Number(r.income) || 0) - (Number(r.expense) || 0),
       r.note1 ?? "",
       r.note2 ?? "",
     ].map(csvEscape);
