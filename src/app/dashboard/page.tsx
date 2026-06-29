@@ -12,6 +12,7 @@ import { WithdrawalForm } from "./withdrawal-form";
 import { ProfileBlock } from "./profile-block";
 import { TransactionList } from "./transaction-list";
 import { WithdrawalStatusBadge } from "./withdrawal-badge";
+import { NetworkStats } from "./network-stats";
 import { Skeleton } from "@/ui/skeleton";
 import { EmptyState } from "@/ui/empty-state";
 import { formatCurrency, formatDateTime } from "@/lib/utils";
@@ -82,7 +83,10 @@ function WelcomeSkeleton() {
 }
 
 async function StatsGrid() {
-  const stats = await getDashboardStats();
+  const [stats, downline] = await Promise.all([
+    getDashboardStats(),
+    getMyDownline(),
+  ]);
   if (!stats) return null;
   return (
     <div className="space-y-3">
@@ -101,23 +105,12 @@ async function StatsGrid() {
         <StatCard label="審核中金額" value={stats.lockedAmount} />
       </div>
 
-      {/* 人數：次要對帳列 */}
-      <div className="rounded-card border border-hairline bg-surface flex flex-col divide-y sm:flex-row sm:divide-y-0 sm:divide-x divide-hairline">
-        <div className="flex-1 px-4 py-3 flex items-center justify-between gap-2">
-          <span className="eyebrow text-slate-500">我的推薦人數</span>
-          <span className="fig text-lg text-ink">
-            {stats.referralCount}
-            <span className="ml-1 text-sm font-medium text-slate-400">人</span>
-          </span>
-        </div>
-        <div className="flex-1 px-4 py-3 flex items-center justify-between gap-2">
-          <span className="eyebrow text-slate-500">我的網絡人數</span>
-          <span className="fig text-lg text-ink">
-            {stats.networkCount}
-            <span className="ml-1 text-sm font-medium text-slate-400">人</span>
-          </span>
-        </div>
-      </div>
+      {/* 人數：次要對帳列（可點開看下線名單） */}
+      <NetworkStats
+        referralCount={stats.referralCount}
+        networkCount={stats.networkCount}
+        downline={downline}
+      />
     </div>
   );
 }
