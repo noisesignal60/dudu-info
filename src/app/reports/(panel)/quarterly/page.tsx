@@ -2,7 +2,7 @@ import { Suspense } from "react";
 import { Skeleton } from "@/ui/skeleton";
 import { SectionCard } from "@/ui/section-card";
 import { listDepartments } from "@/data/reports/departments";
-import { getPeriodReport } from "@/data/reports/ledger";
+import { getPeriodReport, listLedgerYears } from "@/data/reports/ledger";
 import { LedgerStatsBar } from "../_components/stats-bar";
 import { AggregateTable } from "../_components/aggregate-table";
 import { ReportPeriodBar } from "../_components/report-period-bar";
@@ -23,7 +23,7 @@ export default function ReportsQuarterlyPage({
       <div>
         <h1 className="font-serif text-2xl font-black text-slate-900">季報表</h1>
         <p className="text-slate-500 mt-1 text-sm">
-          當季收入、支出、淨額（以半月為點）；可用上一個／下一個切換季別
+          當季收入、支出、淨額（以半月為點）；可直接選擇或用上一個／下一個切換季別
         </p>
       </div>
 
@@ -40,9 +40,10 @@ async function Content({ searchParams }: { searchParams: SearchParams }) {
   const year = sp.y ? Number(sp.y) : now.getFullYear();
   const quarter = sp.q ? Number(sp.q) : Math.floor(now.getMonth() / 3) + 1;
 
-  const [departments, report] = await Promise.all([
+  const [departments, report, years] = await Promise.all([
     listDepartments(),
     getPeriodReport({ scope: "quarter", year, quarter, departmentId: sp.dept }),
+    listLedgerYears(),
   ]);
 
   return (
@@ -53,6 +54,7 @@ async function Content({ searchParams }: { searchParams: SearchParams }) {
         quarter={quarter}
         dept={sp.dept}
         departments={departments}
+        years={years}
       />
       <LedgerStatsBar
         income={report.totalIncome}

@@ -3,12 +3,17 @@
 import { usePathname, useRouter } from "next/navigation";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import { Button } from "@/ui/button";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/ui/select";
 import type { Department } from "@/data/reports/departments";
 import type { ReportScope } from "@/data/reports/ledger";
 
-const fieldClass =
-  "rounded-lg border border-input bg-surface min-h-10 px-3 text-sm text-ink " +
-  "outline-none transition-[color,box-shadow] focus-visible:border-brand focus-visible:ring-4 focus-visible:ring-ring/25";
+const ALL = "all";
 
 export function ReportPeriodBar({
   scope,
@@ -17,6 +22,7 @@ export function ReportPeriodBar({
   quarter,
   dept,
   departments,
+  years = [],
 }: {
   scope: ReportScope;
   year: number;
@@ -24,6 +30,7 @@ export function ReportPeriodBar({
   quarter?: number;
   dept?: string;
   departments: Department[];
+  years?: number[];
 }) {
   const router = useRouter();
   const pathname = usePathname();
@@ -75,12 +82,11 @@ export function ReportPeriodBar({
     go({ year: y, quarter: qtr });
   };
 
-  const label =
-    scope === "month"
-      ? `${year} 年 ${month} 月`
-      : scope === "quarter"
-        ? `${year} 年 第 ${quarter} 季`
-        : `${year} 年`;
+  // 年份選項：今年與目前選定年份一定在清單內，由新到舊
+  const currentYear = new Date().getFullYear();
+  const yearOptions = [...new Set([currentYear, year, ...years])].sort(
+    (a, b) => b - a
+  );
 
   return (
     <div className="bg-card border border-hairline rounded-card p-4 flex flex-wrap items-center gap-3">
@@ -94,9 +100,61 @@ export function ReportPeriodBar({
         >
           <ChevronLeft />
         </Button>
-        <span className="min-w-40 text-center font-serif text-lg font-bold text-slate-900">
-          {label}
-        </span>
+
+        <div className="flex items-center gap-2">
+          <Select
+            value={String(year)}
+            onValueChange={(v) => go({ year: Number(v) })}
+          >
+            <SelectTrigger size="sm" className="w-28" aria-label="選擇年份">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              {yearOptions.map((y) => (
+                <SelectItem key={y} value={String(y)}>
+                  {y} 年
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+
+          {scope === "month" && (
+            <Select
+              value={String(month ?? 1)}
+              onValueChange={(v) => go({ month: Number(v) })}
+            >
+              <SelectTrigger size="sm" className="w-24" aria-label="選擇月份">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {Array.from({ length: 12 }).map((_, i) => (
+                  <SelectItem key={i + 1} value={String(i + 1)}>
+                    {i + 1} 月
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          )}
+
+          {scope === "quarter" && (
+            <Select
+              value={String(quarter ?? 1)}
+              onValueChange={(v) => go({ quarter: Number(v) })}
+            >
+              <SelectTrigger size="sm" className="w-28" aria-label="選擇季別">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {[1, 2, 3, 4].map((q) => (
+                  <SelectItem key={q} value={String(q)}>
+                    第 {q} 季
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          )}
+        </div>
+
         <Button
           type="button"
           size="icon"
@@ -110,18 +168,22 @@ export function ReportPeriodBar({
 
       <div className="ml-auto flex items-center gap-2">
         <label className="text-xs font-medium text-slate-500">部門</label>
-        <select
-          value={dept ?? ""}
-          onChange={(e) => go({ dept: e.target.value || undefined })}
-          className={fieldClass}
+        <Select
+          value={dept ?? ALL}
+          onValueChange={(v) => go({ dept: v === ALL ? undefined : v })}
         >
-          <option value="">全部部門</option>
-          {departments.map((d) => (
-            <option key={d.id} value={d.id}>
-              {d.name}
-            </option>
-          ))}
-        </select>
+          <SelectTrigger size="sm" className="w-40" aria-label="選擇部門">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value={ALL}>全部部門</SelectItem>
+            {departments.map((d) => (
+              <SelectItem key={d.id} value={d.id}>
+                {d.name}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
       </div>
     </div>
   );

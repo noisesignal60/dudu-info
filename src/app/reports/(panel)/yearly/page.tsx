@@ -2,7 +2,7 @@ import { Suspense } from "react";
 import { Skeleton } from "@/ui/skeleton";
 import { SectionCard } from "@/ui/section-card";
 import { listDepartments } from "@/data/reports/departments";
-import { getPeriodReport } from "@/data/reports/ledger";
+import { getPeriodReport, listLedgerYears } from "@/data/reports/ledger";
 import { LedgerStatsBar } from "../_components/stats-bar";
 import { AggregateTable } from "../_components/aggregate-table";
 import { ReportPeriodBar } from "../_components/report-period-bar";
@@ -23,7 +23,7 @@ export default function ReportsYearlyPage({
       <div>
         <h1 className="font-serif text-2xl font-black text-slate-900">年報表</h1>
         <p className="text-slate-500 mt-1 text-sm">
-          當年收入、支出、淨額（以月為點）；可用上一個／下一個切換年份
+          當年收入、支出、淨額（以月為點）；可直接選擇或用上一個／下一個切換年份
         </p>
       </div>
 
@@ -39,9 +39,10 @@ async function Content({ searchParams }: { searchParams: SearchParams }) {
   const now = new Date();
   const year = sp.y ? Number(sp.y) : now.getFullYear();
 
-  const [departments, report] = await Promise.all([
+  const [departments, report, years] = await Promise.all([
     listDepartments(),
     getPeriodReport({ scope: "year", year, departmentId: sp.dept }),
+    listLedgerYears(),
   ]);
 
   return (
@@ -51,6 +52,7 @@ async function Content({ searchParams }: { searchParams: SearchParams }) {
         year={year}
         dept={sp.dept}
         departments={departments}
+        years={years}
       />
       <LedgerStatsBar
         income={report.totalIncome}
