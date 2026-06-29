@@ -69,12 +69,6 @@ async function MemberDetail({ params }: { params: Params }) {
           </h1>
           <div className="text-sm text-slate-500 flex flex-wrap gap-x-4 gap-y-1 mt-1">
             <span>LINE：{m.lineDisplay ?? "—"}</span>
-            <span>
-              LINE ID：
-              <code className="bg-background px-1.5 py-0.5 rounded text-xs font-mono">
-                {m.lineUserId}
-              </code>
-            </span>
             <span>註冊：{formatDateTime(m.createdAt)}</span>
           </div>
         </div>
