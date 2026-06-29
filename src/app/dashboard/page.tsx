@@ -83,10 +83,7 @@ function WelcomeSkeleton() {
 }
 
 async function StatsGrid() {
-  const [stats, downline] = await Promise.all([
-    getDashboardStats(),
-    getMyDownline(),
-  ]);
+  const stats = await getDashboardStats();
   if (!stats) return null;
   return (
     <div className="space-y-3">
@@ -109,7 +106,6 @@ async function StatsGrid() {
       <NetworkStats
         referralCount={stats.referralCount}
         networkCount={stats.networkCount}
-        downline={downline}
       />
     </div>
   );

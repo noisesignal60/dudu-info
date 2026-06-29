@@ -45,3 +45,7 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# watermark source font (build-time only; runtime uses generated glyph file)
+/assets/fonts/*.ttf
+/assets/fonts/*.otf

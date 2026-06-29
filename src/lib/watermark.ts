@@ -9,6 +9,7 @@ import { buildPassbookWatermarkSvg } from "./passbook-watermark";
  * 用戶不可覆蓋；上傳一次後即綁定。
  *
  * 浮水印 SVG 由同構函式 `buildPassbookWatermarkSvg` 產生，與前端上傳預覽共用同一份來源。
+ * 字樣為純向量路徑（無 font-family 依賴），故 librsvg 在無 CJK 字型的環境也不會出現豆腐字。
  */
 export async function addPassbookWatermark(
   buffer: ArrayBuffer | Buffer,
