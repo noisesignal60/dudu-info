@@ -9,17 +9,23 @@ import {
 import { LedgerStatsBar } from "./_components/stats-bar";
 import { ReportFilterBar } from "./_components/filter-bar";
 import { LedgerGrid } from "./_components/ledger-grid";
+import { LedgerSearchBar } from "./_components/ledger-search-bar";
+import { LedgerPagination } from "./_components/ledger-pagination";
 import { NewLedgerEntryButton } from "./_components/ledger-modal";
 import { DepartmentManagerButton } from "./_components/department-manager";
 import { ExportCsvButton } from "./_components/export-csv-button";
 
 export const metadata = { title: "收支總表 ｜ 帳簿系統" };
 
+/** 每頁顯示筆數（收支總表分頁）。 */
+const PAGE_SIZE = 100;
+
 type SearchParams = Promise<{
   dept?: string;
   year?: string;
   sort?: string;
   page?: string;
+  q?: string;
 }>;
 
 export default function ReportsOverviewPage({
@@ -45,6 +51,10 @@ export default function ReportsOverviewPage({
         <FilterBlock searchParams={searchParams} />
       </Suspense>
 
+      <Suspense fallback={<Skeleton className="h-12 rounded-card" />}>
+        <LedgerSearchBar />
+      </Suspense>
+
       <Suspense fallback={<Skeleton className="h-24 rounded-card" />}>
         <Content searchParams={searchParams} />
       </Suspense>
@@ -62,6 +72,7 @@ async function ToolbarBlock({ searchParams }: { searchParams: SearchParams }) {
         filters={{
           departmentId: sp.dept,
           year: sp.year ? Number(sp.year) : undefined,
+          q: sp.q,
         }}
       />
     </div>
@@ -88,23 +99,32 @@ async function FilterBlock({ searchParams }: { searchParams: SearchParams }) {
 async function Content({ searchParams }: { searchParams: SearchParams }) {
   const [sp, departments] = await Promise.all([searchParams, listDepartments()]);
   const sort = (sp.sort ?? "date.desc") as LedgerSortKey;
+  const page = Math.max(1, Number(sp.page ?? 1));
 
   const { rows, totalIncome, totalExpense, total } = await listLedger({
     departmentId: sp.dept,
     year: sp.year ? Number(sp.year) : undefined,
+    q: sp.q,
     sort,
-    page: Math.max(1, Number(sp.page ?? 1)),
-    pageSize: 200,
+    page,
+    pageSize: PAGE_SIZE,
   });
+  const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE));
 
   return (
     <div className="space-y-4">
       <LedgerStatsBar income={totalIncome} expense={totalExpense} />
       <div className="text-sm text-slate-500">
-        共 <strong className="text-slate-900">{total}</strong> 筆 ・ 本頁顯示{" "}
-        {rows.length} 筆
+        共 <strong className="text-slate-900">{total}</strong> 筆 ・ 第 {page} /{" "}
+        {totalPages} 頁 ・ 本頁顯示 {rows.length} 筆
       </div>
       <LedgerGrid initialRows={rows} departments={departments} />
+      <LedgerPagination
+        basePath="/reports"
+        searchParams={sp}
+        page={page}
+        totalPages={totalPages}
+      />
     </div>
   );
 }

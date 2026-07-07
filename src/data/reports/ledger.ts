@@ -35,6 +35,7 @@ export type LedgerListParams = {
   month?: number; // 1-12
   quarter?: number; // 1-4
   day?: string; // 單日 ISO YYYY-MM-DD（指定時優先於 year/month/quarter）
+  q?: string; // 關鍵字：模糊比對 車號/人名（car_or_person）與 項目（item）
   sort?: LedgerSortKey;
   page?: number;
   pageSize?: number;
@@ -73,9 +74,22 @@ export async function listLedger(
     params.month ?? 0,
     params.quarter ?? 0,
     params.day ?? "",
+    params.q?.trim() ?? "",
     params.sort ?? "date.desc",
     page,
     pageSize,
+  );
+}
+
+/** 關鍵字模糊比對 車號/人名 與 項目（比照 admin/members 的 applyMemberSearch）。 */
+function applyLedgerSearch<T extends { or: (f: string) => T }>(
+  query: T,
+  q: string,
+): T {
+  if (!q) return query;
+  const pattern = `%${q}%`;
+  return query.or(
+    [`car_or_person.ilike.${pattern}`, `item.ilike.${pattern}`].join(","),
   );
 }
 
@@ -85,13 +99,14 @@ async function queryLedger(
   month: number,
   quarter: number,
   day: string,
+  q: string,
   sort: LedgerSortKey,
   page: number,
   pageSize: number,
 ): Promise<LedgerListResult> {
   "use cache";
   cacheTag("reports-ledger");
-  cacheTag(`reports-ledger-${departmentId}-${year}-${month}-${quarter}-${day}-${sort}-${page}-${pageSize}`);
+  cacheTag(`reports-ledger-${departmentId}-${year}-${month}-${quarter}-${day}-${q}-${sort}-${page}-${pageSize}`);
 
   const db = supabaseAdmin();
   const offset = (page - 1) * pageSize;
@@ -115,6 +130,8 @@ async function queryLedger(
   const { from, to } = dateRange(year, month, quarter, day);
   if (from) query = query.gte("entry_date", from);
   if (to) query = query.lt("entry_date", to);
+
+  query = applyLedgerSearch(query, q);
 
   const { data, count } = await query;
 
@@ -147,6 +164,7 @@ async function queryLedger(
     month,
     quarter,
     day,
+    q,
   );
 
   return {
@@ -165,22 +183,29 @@ async function aggregateSums(
   month: number,
   quarter: number,
   day: string,
+  q: string,
 ): Promise<{ sumIncome: number; sumExpense: number }> {
   const db = supabaseAdmin();
-  let q = db
-    .from("ledger_entries")
-    .select("income, expense")
-    .is("deleted_at", null);
-  if (departmentId) q = q.eq("department_id", departmentId);
-
   const { from, to } = dateRange(year, month, quarter, day);
-  if (from) q = q.gte("entry_date", from);
-  if (to) q = q.lt("entry_date", to);
-
-  const { data } = await q;
+  const data = await fetchAllRows<{ income: number | null; expense: number | null }>(
+    (lo, hi) => {
+      let qy = db
+        .from("ledger_entries")
+        .select("income, expense")
+        .is("deleted_at", null)
+        .order("entry_date", { ascending: true })
+        .order("id", { ascending: true })
+        .range(lo, hi);
+      if (departmentId) qy = qy.eq("department_id", departmentId);
+      if (from) qy = qy.gte("entry_date", from);
+      if (to) qy = qy.lt("entry_date", to);
+      qy = applyLedgerSearch(qy, q);
+      return qy;
+    },
+  );
   let sumIncome = 0;
   let sumExpense = 0;
-  for (const r of data ?? []) {
+  for (const r of data) {
     sumIncome += Number(r.income ?? 0);
     sumExpense += Number(r.expense ?? 0);
   }
@@ -230,6 +255,26 @@ function addOneDayISO(iso: string): string {
     .slice(0, 10);
 }
 
+/**
+ * 逐頁抓取所有符合條件的列，突破 PostgREST 預設「每次查詢最多回 1000 筆」的上限
+ *（`.limit(大數)` 無法覆寫該伺服器端上限）。
+ * `build(lo, hi)` 需回傳已套用 `.range(lo, hi)` 與「穩定排序」的查詢；
+ * 穩定排序（entry_date + id）確保分頁不漏抓、不重複。
+ */
+async function fetchAllRows<T>(
+  build: (lo: number, hi: number) => PromiseLike<{ data: T[] | null }>,
+): Promise<T[]> {
+  const PAGE = 1000;
+  const out: T[] = [];
+  for (let lo = 0; ; lo += PAGE) {
+    const { data } = await build(lo, lo + PAGE - 1);
+    const batch = data ?? [];
+    out.push(...batch);
+    if (batch.length < PAGE) break;
+  }
+  return out;
+}
+
 // ──────────────────────────────────────────────────────────────
 // 聚合查詢（月報表、季報表、年報表）
 // ──────────────────────────────────────────────────────────────
@@ -262,23 +307,27 @@ async function aggregate(
   cacheTag(`reports-agg-${groupBy}-${year}-${departmentId}`);
 
   const db = supabaseAdmin();
-  let q = db
-    .from("ledger_entries")
-    .select("entry_date, income, expense")
-    .is("deleted_at", null)
-    .order("entry_date", { ascending: false })
-    .limit(20000);
-
-  if (departmentId) q = q.eq("department_id", departmentId);
-
-  if (year && groupBy !== "year") {
-    q = q.gte("entry_date", `${year}-01-01`).lt("entry_date", `${year + 1}-01-01`);
-  }
-
-  const { data } = await q;
+  const data = await fetchAllRows<{
+    entry_date: string;
+    income: number | null;
+    expense: number | null;
+  }>((lo, hi) => {
+    let q = db
+      .from("ledger_entries")
+      .select("entry_date, income, expense")
+      .is("deleted_at", null)
+      .order("entry_date", { ascending: true })
+      .order("id", { ascending: true })
+      .range(lo, hi);
+    if (departmentId) q = q.eq("department_id", departmentId);
+    if (year && groupBy !== "year") {
+      q = q.gte("entry_date", `${year}-01-01`).lt("entry_date", `${year + 1}-01-01`);
+    }
+    return q;
+  });
   const buckets = new Map<string, LedgerAggregateRow>();
 
-  for (const r of data ?? []) {
+  for (const r of data) {
     const d = new Date(r.entry_date as string);
     const y = d.getFullYear();
     const m = d.getMonth() + 1;
@@ -397,20 +446,23 @@ async function periodReport(
   );
 
   const db = supabaseAdmin();
-  let q = db
-    .from("ledger_entries")
-    .select(
-      `entry_date, income, expense, department_id,
-       department:department_id ( name )`,
-    )
-    .is("deleted_at", null)
-    .limit(20000);
-  if (from) q = q.gte("entry_date", from);
-  if (to) q = q.lt("entry_date", to);
-  if (departmentId) q = q.eq("department_id", departmentId);
-
-  const { data } = await q;
-  const rows: DeptRow[] = (data ?? []).map((r) => {
+  const data = await fetchAllRows<Record<string, unknown>>((lo, hi) => {
+    let q = db
+      .from("ledger_entries")
+      .select(
+        `entry_date, income, expense, department_id,
+         department:department_id ( name )`,
+      )
+      .is("deleted_at", null)
+      .order("entry_date", { ascending: true })
+      .order("id", { ascending: true })
+      .range(lo, hi);
+    if (from) q = q.gte("entry_date", from);
+    if (to) q = q.lt("entry_date", to);
+    if (departmentId) q = q.eq("department_id", departmentId);
+    return q;
+  });
+  const rows: DeptRow[] = data.map((r) => {
     const deptRaw = r.department as
       | { name: string | null }
       | { name: string | null }[]
@@ -526,20 +578,23 @@ async function ledgerDeptBreakdown(
   const { from, to } = dateRange(year, month, 0, day);
 
   const db = supabaseAdmin();
-  let q = db
-    .from("ledger_entries")
-    .select(
-      `entry_date, income, expense, department_id,
-       department:department_id ( name )`,
-    )
-    .is("deleted_at", null)
-    .limit(20000);
-  if (from) q = q.gte("entry_date", from);
-  if (to) q = q.lt("entry_date", to);
-  if (departmentId) q = q.eq("department_id", departmentId);
-
-  const { data } = await q;
-  const rows: DeptRow[] = (data ?? []).map((r) => {
+  const data = await fetchAllRows<Record<string, unknown>>((lo, hi) => {
+    let q = db
+      .from("ledger_entries")
+      .select(
+        `entry_date, income, expense, department_id,
+         department:department_id ( name )`,
+      )
+      .is("deleted_at", null)
+      .order("entry_date", { ascending: true })
+      .order("id", { ascending: true })
+      .range(lo, hi);
+    if (from) q = q.gte("entry_date", from);
+    if (to) q = q.lt("entry_date", to);
+    if (departmentId) q = q.eq("department_id", departmentId);
+    return q;
+  });
+  const rows: DeptRow[] = data.map((r) => {
     const deptRaw = r.department as
       | { name: string | null }
       | { name: string | null }[]

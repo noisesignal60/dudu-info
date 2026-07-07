@@ -325,32 +325,47 @@ export async function exportLedgerCsvAction(filters: {
   year?: number;
   month?: number;
   quarter?: number;
+  q?: string;
 }): Promise<{ ok: true; csv: string; filename: string } | { ok: false; error: string }> {
   await requireAdminId();
   const db = supabaseAdmin();
-
-  let q = db
-    .from("ledger_entries")
-    .select(
-      `entry_date, car_or_person, item, income, expense, note1, note2,
-       department:department_id ( name )`,
-    )
-    .is("deleted_at", null)
-    .order("entry_date", { ascending: false })
-    .limit(20000);
-
-  if (filters.departmentId) q = q.eq("department_id", filters.departmentId);
 
   const { from, to } = dateRange(
     filters.year ?? 0,
     filters.month ?? 0,
     filters.quarter ?? 0,
   );
-  if (from) q = q.gte("entry_date", from);
-  if (to) q = q.lt("entry_date", to);
+  // 關鍵字：模糊比對 車號/人名 與 項目（與列表搜尋一致）
+  const term = filters.q?.trim() ?? "";
 
-  const { data, error } = await q;
-  if (error) return { ok: false, error: error.message };
+  // 逐頁抓取，突破 PostgREST 預設每次最多 1000 筆的上限（否則匯出會被截斷）。
+  // 穩定排序 entry_date + id 皆遞減，維持「新到舊」且分頁不漏抓。
+  const PAGE = 1000;
+  const data: Record<string, unknown>[] = [];
+  for (let lo = 0; ; lo += PAGE) {
+    let q = db
+      .from("ledger_entries")
+      .select(
+        `entry_date, car_or_person, item, income, expense, note1, note2,
+         department:department_id ( name )`,
+      )
+      .is("deleted_at", null)
+      .order("entry_date", { ascending: false })
+      .order("id", { ascending: false })
+      .range(lo, lo + PAGE - 1);
+    if (filters.departmentId) q = q.eq("department_id", filters.departmentId);
+    if (from) q = q.gte("entry_date", from);
+    if (to) q = q.lt("entry_date", to);
+    if (term) {
+      const p = `%${term}%`;
+      q = q.or([`car_or_person.ilike.${p}`, `item.ilike.${p}`].join(","));
+    }
+    const { data: batch, error } = await q;
+    if (error) return { ok: false, error: error.message };
+    const rows = batch ?? [];
+    data.push(...rows);
+    if (rows.length < PAGE) break;
+  }
 
   const head = [
     "日期",

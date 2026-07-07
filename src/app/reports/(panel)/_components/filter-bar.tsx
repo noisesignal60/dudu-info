@@ -62,6 +62,8 @@ export function ReportFilterBar({
     const params = new URLSearchParams(searchParams as Record<string, string>);
     if (!value || value === ALL) params.delete(key);
     else params.set(key, value);
+    // 改任一篩選都回到第 1 頁，避免停在超出範圍的頁碼
+    params.delete("page");
     const qs = params.toString();
     router.push(qs ? `${basePath}?${qs}` : basePath);
   };

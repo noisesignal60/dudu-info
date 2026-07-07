@@ -7,7 +7,10 @@ const inputVariants = cva(
     "outline-none transition-[color,box-shadow] " +
     "focus-visible:border-accent-blue focus-visible:ring-4 focus-visible:ring-ring/25 " +
     "disabled:cursor-not-allowed disabled:opacity-50 aria-invalid:border-money aria-invalid:ring-money/20 " +
-    "file:border-0 file:bg-transparent file:font-medium file:text-ink",
+    "file:border-0 file:bg-transparent file:font-medium file:text-ink " +
+    // 隱藏 WebKit/Blink 對 type=search 的原生清除鈕（各搜尋框已自帶清除 X）
+    "[&::-webkit-search-cancel-button]:[-webkit-appearance:none] " +
+    "[&::-webkit-search-decoration]:[-webkit-appearance:none]",
   {
     variants: {
       inputSize: {

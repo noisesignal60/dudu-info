@@ -138,6 +138,14 @@ export function useSheetResize({
     [sizes.widths, defaultWidths, startDrag],
   );
 
+  // 直接設定某欄寬度（供 AutoFit 雙擊自動符合內容）；一律 clamp。
+  const setColWidth = useCallback((colId: string, width: number) => {
+    setSizes((s) => ({
+      ...s,
+      widths: { ...s.widths, [colId]: clamp(width, MIN_COL, MAX_COL) },
+    }));
+  }, []);
+
   const startRowResize = useCallback(
     (rowKey: string, e: React.PointerEvent) => {
       const startH = sizes.rowHeights[rowKey] ?? defaultRowHeight;
@@ -178,6 +186,7 @@ export function useSheetResize({
     getRowHeight,
     startColResize,
     startRowResize,
+    setColWidth,
     reset,
   };
 }

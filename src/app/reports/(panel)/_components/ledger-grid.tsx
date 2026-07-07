@@ -9,7 +9,14 @@ import {
   useState,
 } from "react";
 import { useRouter } from "next/navigation";
-import { ChevronDown, Trash2, Upload } from "lucide-react";
+import {
+  ChevronDown,
+  ClipboardPaste,
+  Copy,
+  Plus,
+  Trash2,
+  Upload,
+} from "lucide-react";
 import {
   saveLedgerGridAction,
   type GridUpsertRow,
@@ -41,6 +48,13 @@ import {
   sheetActiveCls,
   sheetInvalidCls,
 } from "@/ui/sheet";
+import {
+  ContextMenu,
+  ContextMenuContent,
+  ContextMenuItem,
+  ContextMenuSeparator,
+  ContextMenuTrigger,
+} from "@/ui/context-menu";
 
 const MAX_HISTORY = 30;
 
@@ -337,12 +351,67 @@ export function LedgerGrid({
     getRowHeight,
     startColResize,
     startRowResize,
-    reset: resetSizes,
+    setColWidth,
   } = useSheetResize({
     storageKey: "sheet-size:ledger-grid",
     defaultWidths: DEFAULT_WIDTHS,
     defaultRowHeight: DEFAULT_ROW_HEIGHT,
   });
+
+  // AutoFit：量測用的 canvas context（快取；量測不需掛上 DOM）
+  const measureCtxRef = useRef<CanvasRenderingContext2D | null>(null);
+  const getMeasureCtx = useCallback(() => {
+    if (measureCtxRef.current) return measureCtxRef.current;
+    const ctx = document.createElement("canvas").getContext("2d");
+    measureCtxRef.current = ctx;
+    return ctx;
+  }, []);
+
+  // 雙擊欄邊界：把該欄調整到剛好完整顯示內容（表頭 + 所有列）的最佳寬度。
+  const autoFitColumn = useCallback(
+    (field: RowField) => {
+      const col = COLS.find((c) => c.field === field);
+      const grid = gridRef.current;
+      const ctx = getMeasureCtx();
+      if (!col || !grid || !ctx) return;
+
+      const bodyCell = grid.querySelector<HTMLElement>(
+        `[data-autofit="${field}"]`,
+      );
+      const headCell = grid.querySelector<HTMLElement>(
+        `[data-autofit-head="${field}"]`,
+      );
+
+      let max = 0;
+      if (headCell) {
+        ctx.font = getComputedStyle(headCell).font;
+        max = ctx.measureText(col.label).width;
+      }
+      if (bodyCell) {
+        ctx.font = getComputedStyle(bodyCell).font;
+        for (const r of state.present) {
+          const w = ctx.measureText(displayValue(r, col)).width;
+          if (w > max) max = w;
+        }
+      }
+
+      // 內距 + 邊框（自實際 cell 讀取），部門欄再加下拉箭頭空間
+      let extra = 34;
+      if (bodyCell) {
+        const cs = getComputedStyle(bodyCell);
+        extra =
+          parseFloat(cs.paddingLeft) +
+          parseFloat(cs.paddingRight) +
+          parseFloat(cs.borderLeftWidth) +
+          parseFloat(cs.borderRightWidth) +
+          6;
+      }
+      if (col.type === "dept") extra += 28; // ChevronDown（pr-6）+ 緩衝
+
+      setColWidth(field, Math.ceil(max) + extra); // setColWidth 內部會 clamp
+    },
+    [state.present, setColWidth, getMeasureCtx],
+  );
 
   // 伺服器資料更新（儲存後 router.refresh()）時重新載入，並重建 baseline
   useEffect(() => {
@@ -607,14 +676,14 @@ export function LedgerGrid({
   }
 
   // ── 從 Excel 貼上（剪貼簿 TSV） ──────────────────────────────
-  const onPaste = useCallback(
-    (e: React.ClipboardEvent) => {
-      if (editing) return; // 編輯中讓原生貼上進輸入框
-      const text = e.clipboardData.getData("text");
-      if (!/[\t\n\r]/u.test(text)) return; // 單格 → 原生貼上
+  // 把剪貼簿純文字（TSV）從 active 儲存格起整批寫入，不足的列自動補。
+  // 供 Ctrl+V（onPaste）與右鍵選單「貼上」（handleMenuPaste）共用；
+  // 單格（1×1）也照樣寫入 active 那一格（選單貼上沒有原生輸入框可退回）。
+  const applyPaste = useCallback(
+    (text: string) => {
+      if (!active) return;
       const matrix = parseClipboardTSV(text);
-      if (matrix.length === 0 || !active) return;
-      e.preventDefault();
+      if (matrix.length === 0) return;
 
       const startCol = active.c;
       const rows = state.present.map((r) => ({ ...r }));
@@ -630,8 +699,42 @@ export function LedgerGrid({
       dispatch({ type: "set", rows });
       setFlash({ ok: true, msg: `已貼上 ${matrix.length} 列，記得按儲存` });
     },
-    [active, editing, state.present],
+    [active, state.present],
   );
+
+  const onPaste = useCallback(
+    (e: React.ClipboardEvent) => {
+      if (editing) return; // 編輯中讓原生貼上進輸入框
+      const text = e.clipboardData.getData("text");
+      if (!/[\t\n\r]/u.test(text)) return; // 單格 → 原生貼上
+      if (!active) return;
+      e.preventDefault();
+      applyPaste(text);
+    },
+    [active, editing, applyPaste],
+  );
+
+  // ── 右鍵選單：貼上 / 複製（讀寫剪貼簿；點選單＝使用者手勢，允許存取） ──
+  const handleMenuPaste = useCallback(async () => {
+    if (!active) return;
+    try {
+      const text = await navigator.clipboard.readText();
+      applyPaste(text);
+    } catch {
+      setFlash({ ok: false, msg: "讀不到剪貼簿內容，請改用 Ctrl+V 貼上" });
+    }
+  }, [active, applyPaste]);
+
+  const handleMenuCopy = useCallback(async () => {
+    if (!active) return;
+    const value = state.present[active.r]?.[COLS[active.c].field] ?? "";
+    try {
+      await navigator.clipboard.writeText(value);
+    } catch {
+      // 退回：讓使用者手動複製（比照 copy-button 的 prompt 後備）
+      window.prompt("請手動複製（Ctrl+C）", value);
+    }
+  }, [active, state.present]);
 
   // ── 匯入 Excel / CSV ────────────────────────────────────────
   async function onImportFile(e: React.ChangeEvent<HTMLInputElement>) {
@@ -826,14 +929,6 @@ export function LedgerGrid({
         </Button>
         <Button
           type="button"
-          variant="secondary"
-          size="sm"
-          onClick={resetSizes}
-        >
-          重設欄列大小
-        </Button>
-        <Button
-          type="button"
           variant="danger"
           size="sm"
           onClick={removeSelected}
@@ -866,8 +961,10 @@ export function LedgerGrid({
         </div>
       </div>
 
-      {/* 桌機：真試算表 */}
+      {/* 桌機：真試算表（右鍵選單：貼上／複製／新增／刪除） */}
       <div className="hidden md:block">
+        <ContextMenu>
+        <ContextMenuTrigger asChild>
         <SheetScroll
           ref={gridRef}
           role="grid"
@@ -907,10 +1004,12 @@ export function LedgerGrid({
                   </div>
                 </SheetCorner>
                 {COLS.map((col) => (
-                  <SheetHeadCell key={col.field}>
+                  <SheetHeadCell key={col.field} data-autofit-head={col.field}>
                     {col.label}
                     <SheetColResizer
                       onPointerDown={(e) => startColResize(col.field, e)}
+                      onDoubleClick={() => autoFitColumn(col.field)}
+                      title="拖曳調整欄寬，雙擊自動符合內容"
                     />
                   </SheetHeadCell>
                 ))}
@@ -945,7 +1044,9 @@ export function LedgerGrid({
                         return (
                           <SheetCell
                             key={col.field}
+                            data-autofit={col.field}
                             onClick={() => selectCell(r, c)}
+                            onContextMenu={() => selectCell(r, c)}
                             className={cn(
                               "p-0",
                               invalid && sheetInvalidCls,
@@ -971,7 +1072,9 @@ export function LedgerGrid({
                       return (
                         <SheetCell
                           key={col.field}
+                          data-autofit={col.field}
                           onClick={() => selectCell(r, c)}
+                          onContextMenu={() => selectCell(r, c)}
                           onDoubleClick={() => enterEdit(r, c)}
                           className={cn(
                             "cursor-cell",
@@ -1010,6 +1113,40 @@ export function LedgerGrid({
             </tbody>
           </SheetTable>
         </SheetScroll>
+        </ContextMenuTrigger>
+        <ContextMenuContent>
+          <ContextMenuItem disabled={!active} onSelect={handleMenuPaste}>
+            <ClipboardPaste />
+            貼上
+          </ContextMenuItem>
+          <ContextMenuItem disabled={!active} onSelect={handleMenuCopy}>
+            <Copy />
+            複製這一格
+          </ContextMenuItem>
+          <ContextMenuSeparator />
+          <ContextMenuItem onSelect={addRow}>
+            <Plus />
+            新增一列
+          </ContextMenuItem>
+          <ContextMenuItem
+            disabled={!active}
+            onSelect={() => active && removeRow(active.r)}
+            className="text-money focus:text-money"
+          >
+            <Trash2 />
+            刪除這一列
+          </ContextMenuItem>
+          {selected.size > 0 && (
+            <ContextMenuItem
+              onSelect={removeSelected}
+              className="text-money focus:text-money"
+            >
+              <Trash2 />
+              刪除勾選的 {selected.size} 列
+            </ContextMenuItem>
+          )}
+        </ContextMenuContent>
+        </ContextMenu>
         <p className="mt-2 text-sm text-slate-500">
           共 <strong>{state.present.length}</strong> 列
         </p>

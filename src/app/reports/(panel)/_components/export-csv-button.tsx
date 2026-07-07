@@ -12,6 +12,7 @@ export function ExportCsvButton({
     year?: number;
     month?: number;
     quarter?: number;
+    q?: string;
   };
 }) {
   const [pending, start] = useTransition();
