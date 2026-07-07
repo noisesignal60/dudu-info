@@ -49,17 +49,19 @@ export function LedgerSearchBar() {
           className="pr-10"
         />
         {q && (
-          <button
+          <Button
             type="button"
+            variant="ghost"
+            size="icon"
             onClick={() => {
               setQ("");
               submit("");
             }}
-            className="absolute right-2 top-1/2 -translate-y-1/2 p-1.5 rounded-md hover:bg-secondary"
+            className="absolute right-1 top-1/2 -translate-y-1/2 size-9 text-slate-500"
             aria-label="清除搜尋"
           >
-            <X className="w-4 h-4 text-slate-500" />
-          </button>
+            <X />
+          </Button>
         )}
       </div>
       <Button type="submit" size="sm" disabled={isPending}>

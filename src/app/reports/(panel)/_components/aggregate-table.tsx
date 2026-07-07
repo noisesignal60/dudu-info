@@ -3,7 +3,6 @@
 import type { LedgerAggregateRow } from "@/data/reports/ledger";
 import { formatAmount, cn } from "@/lib/utils";
 import { useSheetResize } from "@/lib/use-sheet-resize";
-import { Button } from "@/ui/button";
 import { EmptyState } from "@/ui/empty-state";
 import {
   SheetScroll,
@@ -35,7 +34,6 @@ export function AggregateTable({ rows }: { rows: LedgerAggregateRow[] }) {
     getRowHeight,
     startColResize,
     startRowResize,
-    reset: resetSizes,
   } = useSheetResize({
     storageKey: "sheet-size:aggregate",
     defaultWidths: DEFAULT_WIDTHS,
@@ -56,16 +54,6 @@ export function AggregateTable({ rows }: { rows: LedgerAggregateRow[] }) {
 
   return (
     <div className="space-y-2">
-      <div className="flex justify-end">
-        <Button
-          type="button"
-          variant="secondary"
-          size="sm"
-          onClick={resetSizes}
-        >
-          重設欄列大小
-        </Button>
-      </div>
       <SheetScroll>
         <SheetTable
           style={{ width: ROWNUM_W + totalWidth, tableLayout: "fixed" }}
