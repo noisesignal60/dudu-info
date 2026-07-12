@@ -173,10 +173,10 @@ export function LedgerTable({
                 <TableCell>{r.carOrPerson ?? "—"}</TableCell>
                 <TableCell>{r.item}</TableCell>
                 <AmountCell income={r.income} expense={r.expense} />
-                <TableCell className="max-w-[160px] truncate text-slate-600">
+                <TableCell className="max-w-[160px] whitespace-normal break-words text-slate-600">
                   {r.note1 ?? "—"}
                 </TableCell>
-                <TableCell className="max-w-[160px] truncate text-slate-600">
+                <TableCell className="max-w-[160px] whitespace-normal break-words text-slate-600">
                   {r.note2 ?? "—"}
                 </TableCell>
                 {editable && (

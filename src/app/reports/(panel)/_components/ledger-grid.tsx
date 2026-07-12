@@ -235,6 +235,15 @@ function num(s: string): number {
   return Number(s) || 0;
 }
 
+/**
+ * 由 computed style 組出 canvas 可用的字型字串。
+ * 不用 getComputedStyle(el).font 簡寫——它在多數瀏覽器回傳空字串，
+ * 會讓 canvas.measureText 退回 10px 預設而量測失準。
+ */
+function cssFont(cs: CSSStyleDeclaration): string {
+  return `${cs.fontStyle} ${cs.fontWeight} ${cs.fontSize} ${cs.fontFamily}`;
+}
+
 /** 列是否有實質內容（部門名稱單獨存在不算）。 */
 function isMeaningful(r: Row): boolean {
   return Boolean(
@@ -368,6 +377,9 @@ export function LedgerGrid({
   }, []);
 
   // 雙擊欄邊界：把該欄調整到剛好完整顯示內容（表頭 + 所有列）的最佳寬度。
+  // 註：getComputedStyle(el).font 的 font 簡寫在 Chrome/Firefox 會回傳空字串，
+  // 讓 canvas 退回 10px 預設而量測失準（欄寬只算到實際所需的約 1/3、內容換行）；
+  // 因此改由個別屬性組出字型字串。
   const autoFitColumn = useCallback(
     (field: RowField) => {
       const col = COLS.find((c) => c.field === field);
@@ -384,11 +396,12 @@ export function LedgerGrid({
 
       let max = 0;
       if (headCell) {
-        ctx.font = getComputedStyle(headCell).font;
+        ctx.font = cssFont(getComputedStyle(headCell));
         max = ctx.measureText(col.label).width;
       }
-      if (bodyCell) {
-        ctx.font = getComputedStyle(bodyCell).font;
+      const bodyCs = bodyCell ? getComputedStyle(bodyCell) : null;
+      if (bodyCell && bodyCs) {
+        ctx.font = cssFont(bodyCs);
         for (const r of state.present) {
           const w = ctx.measureText(displayValue(r, col)).width;
           if (w > max) max = w;
@@ -397,8 +410,8 @@ export function LedgerGrid({
 
       // 內距 + 邊框（自實際 cell 讀取），部門欄再加下拉箭頭空間
       let extra = 34;
-      if (bodyCell) {
-        const cs = getComputedStyle(bodyCell);
+      if (bodyCs) {
+        const cs = bodyCs;
         extra =
           parseFloat(cs.paddingLeft) +
           parseFloat(cs.paddingRight) +
@@ -1096,7 +1109,7 @@ export function LedgerGrid({
                           ) : (
                             <span
                               className={cn(
-                                "block truncate",
+                                "block whitespace-normal break-words",
                                 col.field === "amount" &&
                                   amountToneCls(num(row.amount)),
                               )}
