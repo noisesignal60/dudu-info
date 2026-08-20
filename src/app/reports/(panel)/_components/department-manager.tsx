@@ -7,6 +7,7 @@ import {
   createDepartmentAction,
   renameDepartmentAction,
   deleteDepartmentAction,
+  getDepartmentDeletePreview,
   type DeptFormState,
 } from "@/actions/reports-departments";
 import type { Department } from "@/data/reports/departments";
@@ -121,10 +122,30 @@ function DeptRow({ dept }: { dept: Department }) {
   }
 
   function onDelete() {
-    if (!window.confirm(`確定刪除部門「${dept.name}」？`)) return;
     start(async () => {
-      const res = await deleteDepartmentAction(dept.id);
-      if (!res.ok) alert(res.error ?? "刪除失敗");
+      // 先問後端實際狀況，確認訊息才能一次講清楚會清掉幾筆（軟刪除的帳畫面上看不到）
+      const info = await getDepartmentDeletePreview(dept.id);
+      if (!info.ok) {
+        toast.error(info.error);
+        return;
+      }
+
+      if (info.activeCount > 0) {
+        toast.error(
+          `部門「${dept.name}」底下還有 ${info.activeCount} 筆帳在用，請先把這些帳改到其他部門或刪掉，才能刪除部門`,
+        );
+        return;
+      }
+
+      const message =
+        info.purgedCount > 0
+          ? `部門「${dept.name}」底下還有 ${info.purgedCount} 筆已刪除的帳。\n刪除部門會連這些帳一起永久清除，確定要刪除嗎？`
+          : `確定刪除部門「${dept.name}」？`;
+      if (!window.confirm(message)) return;
+
+      const res = await deleteDepartmentAction(dept.id, info.purgedCount > 0);
+      if (!res.ok) toast.error(res.error ?? "刪除失敗，請稍後再試一次");
+      else toast.success(`已刪除部門「${dept.name}」`);
     });
   }
 
