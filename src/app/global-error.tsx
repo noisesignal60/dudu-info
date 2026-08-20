@@ -1,6 +1,18 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, type CSSProperties } from "react";
+
+const buttonStyle: CSSProperties = {
+  minHeight: "3rem",
+  padding: "0 1.5rem",
+  borderRadius: ".75rem",
+  border: "none",
+  background: "#1E293B",
+  color: "#fff",
+  fontWeight: 700,
+  fontSize: "1.125rem",
+  cursor: "pointer",
+};
 
 /**
  * 取代整個 root layout（含 root error），故自帶 html/body 且用 inline style，
@@ -39,23 +51,35 @@ export default function GlobalError({
           <p style={{ marginTop: ".5rem", color: "#64748b", fontSize: ".95rem" }}>
             請重新整理頁面，若問題持續請稍後再試。
           </p>
-          <button
-            onClick={reset}
+          <div
             style={{
               marginTop: "1.25rem",
-              minHeight: "3rem",
-              padding: "0 1.5rem",
-              borderRadius: ".75rem",
-              border: "none",
-              background: "#1E293B",
-              color: "#fff",
-              fontWeight: 700,
-              fontSize: "1.125rem",
-              cursor: "pointer",
+              display: "flex",
+              flexWrap: "wrap",
+              gap: ".75rem",
+              justifyContent: "center",
             }}
           >
-            重新嘗試
-          </button>
+            <button onClick={reset} style={buttonStyle}>
+              重新嘗試
+            </button>
+            {/*
+              reset() 只會重新 render，網頁裡的舊程式碼還留著。
+              網站剛更新時，舊分頁會拿著過期的程式碼一直失敗，
+              只有整頁重新載入才救得回來。
+            */}
+            <button
+              onClick={() => window.location.reload()}
+              style={{
+                ...buttonStyle,
+                background: "#fff",
+                color: "#0F172A",
+                border: "1px solid #CBD5E1",
+              }}
+            >
+              重新整理頁面
+            </button>
+          </div>
         </div>
       </body>
     </html>
