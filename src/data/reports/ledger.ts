@@ -2,6 +2,7 @@ import "server-only";
 
 import { cacheTag } from "next/cache";
 import { supabaseAdmin } from "@/lib/supabase/admin";
+import { resolveDateRange } from "@/lib/ledger-date";
 
 export type LedgerEntry = {
   id: string;
@@ -35,10 +36,32 @@ export type LedgerListParams = {
   month?: number; // 1-12
   quarter?: number; // 1-4
   day?: string; // 單日 ISO YYYY-MM-DD（指定時優先於 year/month/quarter）
+  /** 自訂區間起日（含當日）ISO YYYY-MM-DD；與 year/month/quarter/day 互斥且優先。 */
+  from?: string;
+  /** 自訂區間訖日（含當日）ISO YYYY-MM-DD；與 year/month/quarter/day 互斥且優先。 */
+  to?: string;
   q?: string; // 關鍵字：模糊比對 車號/人名（car_or_person）與 項目（item）
   sort?: LedgerSortKey;
   page?: number;
   pageSize?: number;
+};
+
+/**
+ * 正規化後的查詢條件：所有欄位都已填滿預設值，直接作為 `"use cache"` 的快取鍵。
+ * 欄位順序固定，同一組篩選必定序列化成同一個鍵。
+ */
+type LedgerQuery = {
+  departmentId: string;
+  year: number;
+  month: number;
+  quarter: number;
+  day: string;
+  from: string;
+  to: string;
+  q: string;
+  sort: LedgerSortKey;
+  page: number;
+  pageSize: number;
 };
 
 export type LedgerListResult = {
@@ -66,19 +89,19 @@ const SORT_MAP: Record<LedgerSortKey, { col: string; asc: boolean }> = {
 export async function listLedger(
   params: LedgerListParams = {},
 ): Promise<LedgerListResult> {
-  const page = Math.max(1, params.page ?? 1);
-  const pageSize = Math.min(500, Math.max(10, params.pageSize ?? 100));
-  return queryLedger(
-    params.departmentId ?? "",
-    params.year ?? 0,
-    params.month ?? 0,
-    params.quarter ?? 0,
-    params.day ?? "",
-    params.q?.trim() ?? "",
-    params.sort ?? "date.desc",
-    page,
-    pageSize,
-  );
+  return queryLedger({
+    departmentId: params.departmentId ?? "",
+    year: params.year ?? 0,
+    month: params.month ?? 0,
+    quarter: params.quarter ?? 0,
+    day: params.day ?? "",
+    from: params.from ?? "",
+    to: params.to ?? "",
+    q: params.q?.trim() ?? "",
+    sort: params.sort ?? "date.desc",
+    page: Math.max(1, params.page ?? 1),
+    pageSize: Math.min(500, Math.max(10, params.pageSize ?? 100)),
+  });
 }
 
 /** 關鍵字模糊比對 車號/人名 與 項目（比照 admin/members 的 applyMemberSearch）。 */
@@ -93,20 +116,13 @@ function applyLedgerSearch<T extends { or: (f: string) => T }>(
   );
 }
 
-async function queryLedger(
-  departmentId: string,
-  year: number,
-  month: number,
-  quarter: number,
-  day: string,
-  q: string,
-  sort: LedgerSortKey,
-  page: number,
-  pageSize: number,
-): Promise<LedgerListResult> {
+async function queryLedger(params: LedgerQuery): Promise<LedgerListResult> {
   "use cache";
+  const { departmentId, q, sort, page, pageSize } = params;
   cacheTag("reports-ledger");
-  cacheTag(`reports-ledger-${departmentId}-${year}-${month}-${quarter}-${day}-${q}-${sort}-${page}-${pageSize}`);
+  cacheTag(
+    `reports-ledger-${departmentId}-${params.year}-${params.month}-${params.quarter}-${params.day}-${params.from}-${params.to}-${q}-${sort}-${page}-${pageSize}`,
+  );
 
   const db = supabaseAdmin();
   const offset = (page - 1) * pageSize;
@@ -127,7 +143,7 @@ async function queryLedger(
 
   if (departmentId) query = query.eq("department_id", departmentId);
 
-  const { from, to } = dateRange(year, month, quarter, day);
+  const { from, to } = resolveDateRange(params);
   if (from) query = query.gte("entry_date", from);
   if (to) query = query.lt("entry_date", to);
 
@@ -158,14 +174,7 @@ async function queryLedger(
   });
 
   // 計算總和（取所有符合條件的，不只本頁）
-  const { sumIncome, sumExpense } = await aggregateSums(
-    departmentId,
-    year,
-    month,
-    quarter,
-    day,
-    q,
-  );
+  const { sumIncome, sumExpense } = await aggregateSums(params);
 
   return {
     rows,
@@ -178,15 +187,11 @@ async function queryLedger(
 }
 
 async function aggregateSums(
-  departmentId: string,
-  year: number,
-  month: number,
-  quarter: number,
-  day: string,
-  q: string,
+  params: LedgerQuery,
 ): Promise<{ sumIncome: number; sumExpense: number }> {
+  const { departmentId, q } = params;
   const db = supabaseAdmin();
-  const { from, to } = dateRange(year, month, quarter, day);
+  const { from, to } = resolveDateRange(params);
   const data = await fetchAllRows<{ income: number | null; expense: number | null }>(
     (lo, hi) => {
       let qy = db
@@ -212,47 +217,8 @@ async function aggregateSums(
   return { sumIncome, sumExpense };
 }
 
-function dateRange(
-  year: number,
-  month: number,
-  quarter: number,
-  day = "",
-): { from: string | null; to: string | null } {
-  // 指定單一日期時優先：只取當天（[day, 隔天)）
-  if (/^\d{4}-\d{2}-\d{2}$/u.test(day)) {
-    return { from: day, to: addOneDayISO(day) };
-  }
-  if (year && month) {
-    const y = year;
-    const m = month;
-    const from = `${y}-${pad(m)}-01`;
-    const next = m === 12 ? { y: y + 1, m: 1 } : { y, m: m + 1 };
-    const to = `${next.y}-${pad(next.m)}-01`;
-    return { from, to };
-  }
-  if (year && quarter) {
-    const startMonth = (quarter - 1) * 3 + 1;
-    const endMonth = startMonth + 3;
-    const from = `${year}-${pad(startMonth)}-01`;
-    const next = endMonth > 12 ? { y: year + 1, m: 1 } : { y: year, m: endMonth };
-    const to = `${next.y}-${pad(next.m)}-01`;
-    return { from, to };
-  }
-  if (year) {
-    return { from: `${year}-01-01`, to: `${year + 1}-01-01` };
-  }
-  return { from: null, to: null };
-}
-
 function pad(n: number): string {
   return n.toString().padStart(2, "0");
-}
-
-/** ISO 日期 +1 天（以 UTC 計算，純日期不受時區影響）。 */
-function addOneDayISO(iso: string): string {
-  return new Date(Date.parse(`${iso}T00:00:00Z`) + 86400000)
-    .toISOString()
-    .slice(0, 10);
 }
 
 /**
@@ -438,12 +404,12 @@ async function periodReport(
     `reports-period-${scope}-${year}-${month}-${quarter}-${departmentId}`,
   );
 
-  // 期間視窗 [from, to)；reuse 既有 dateRange（月：year+month；季：year+quarter；年：僅 year）
-  const { from, to } = dateRange(
+  // 期間視窗 [from, to)；reuse 共用的 resolveDateRange（月：year+month；季：year+quarter；年：僅 year）
+  const { from, to } = resolveDateRange({
     year,
-    scope === "month" ? month : 0,
-    scope === "quarter" ? quarter : 0,
-  );
+    month: scope === "month" ? month : 0,
+    quarter: scope === "quarter" ? quarter : 0,
+  });
 
   const db = supabaseAdmin();
   const data = await fetchAllRows<Record<string, unknown>>((lo, hi) => {
@@ -575,7 +541,7 @@ async function ledgerDeptBreakdown(
   cacheTag("reports-ledger");
   cacheTag(`reports-ledgerbreak-${departmentId}-${year}-${month}-${day}`);
 
-  const { from, to } = dateRange(year, month, 0, day);
+  const { from, to } = resolveDateRange({ year, month, day });
 
   const db = supabaseAdmin();
   const data = await fetchAllRows<Record<string, unknown>>((lo, hi) => {

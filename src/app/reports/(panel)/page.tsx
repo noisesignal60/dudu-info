@@ -23,6 +23,10 @@ const PAGE_SIZE = 100;
 type SearchParams = Promise<{
   dept?: string;
   year?: string;
+  /** 自訂區間起日（含當日）ISO YYYY-MM-DD；與 year 互斥 */
+  from?: string;
+  /** 自訂區間訖日（含當日）ISO YYYY-MM-DD；與 year 互斥 */
+  to?: string;
   sort?: string;
   page?: string;
   q?: string;
@@ -72,6 +76,8 @@ async function ToolbarBlock({ searchParams }: { searchParams: SearchParams }) {
         filters={{
           departmentId: sp.dept,
           year: sp.year ? Number(sp.year) : undefined,
+          from: sp.from,
+          to: sp.to,
           q: sp.q,
         }}
       />
@@ -90,6 +96,7 @@ async function FilterBlock({ searchParams }: { searchParams: SearchParams }) {
       basePath="/reports"
       searchParams={sp}
       showYear
+      showDateRange
       years={years}
       departments={departments}
     />
@@ -104,6 +111,8 @@ async function Content({ searchParams }: { searchParams: SearchParams }) {
   const { rows, totalIncome, totalExpense, total } = await listLedger({
     departmentId: sp.dept,
     year: sp.year ? Number(sp.year) : undefined,
+    from: sp.from,
+    to: sp.to,
     q: sp.q,
     sort,
     page,

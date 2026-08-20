@@ -5,6 +5,7 @@ import { z } from "zod";
 import { getCurrentAdmin } from "@/lib/admin-session";
 import { supabaseAdmin } from "@/lib/supabase/admin";
 import { splitAmount } from "@/lib/ledger-amount";
+import { isIsoDate, resolveDateRange } from "@/lib/ledger-date";
 
 export type LedgerFormState =
   | { ok: false; error?: string; fieldErrors?: Record<string, string> }
@@ -325,16 +326,17 @@ export async function exportLedgerCsvAction(filters: {
   year?: number;
   month?: number;
   quarter?: number;
+  /** 自訂區間起日（含當日）ISO YYYY-MM-DD；與 year 互斥且優先 */
+  from?: string;
+  /** 自訂區間訖日（含當日）ISO YYYY-MM-DD；與 year 互斥且優先 */
+  to?: string;
   q?: string;
 }): Promise<{ ok: true; csv: string; filename: string } | { ok: false; error: string }> {
   await requireAdminId();
   const db = supabaseAdmin();
 
-  const { from, to } = dateRange(
-    filters.year ?? 0,
-    filters.month ?? 0,
-    filters.quarter ?? 0,
-  );
+  // 與畫面共用同一套區間邏輯，杜絕「畫面 30 筆、匯出 300 筆」
+  const { from, to } = resolveDateRange(filters);
   // 關鍵字：模糊比對 車號/人名 與 項目（與列表搜尋一致）
   const term = filters.q?.trim() ?? "";
 
@@ -396,8 +398,7 @@ export async function exportLedgerCsvAction(filters: {
     lines.push(row.join(","));
   }
   const csv = "﻿" + lines.join("\n");
-  const filename = `ledger_${new Date().toISOString().slice(0, 10)}.csv`;
-  return { ok: true, csv, filename };
+  return { ok: true, csv, filename: csvFilename(filters.from, filters.to) };
 }
 
 function csvEscape(v: unknown): string {
@@ -407,28 +408,12 @@ function csvEscape(v: unknown): string {
   return s;
 }
 
-function dateRange(
-  year: number,
-  month: number,
-  quarter: number,
-): { from: string | null; to: string | null } {
-  if (year && month) {
-    const m = month;
-    const from = `${year}-${pad(m)}-01`;
-    const next = m === 12 ? { y: year + 1, m: 1 } : { y: year, m: m + 1 };
-    return { from, to: `${next.y}-${pad(next.m)}-01` };
-  }
-  if (year && quarter) {
-    const startMonth = (quarter - 1) * 3 + 1;
-    const endMonth = startMonth + 3;
-    const from = `${year}-${pad(startMonth)}-01`;
-    const next = endMonth > 12 ? { y: year + 1, m: 1 } : { y: year, m: endMonth };
-    return { from, to: `${next.y}-${pad(next.m)}-01` };
-  }
-  if (year) return { from: `${year}-01-01`, to: `${year + 1}-01-01` };
-  return { from: null, to: null };
-}
-
-function pad(n: number): string {
-  return n.toString().padStart(2, "0");
+/** 匯出檔名：有自訂區間就標在檔名上，讓下載後仍看得出資料範圍。 */
+function csvFilename(from?: string, to?: string): string {
+  const start = isIsoDate(from) ? from : "";
+  const end = isIsoDate(to) ? to : "";
+  if (start && end) return `ledger_${start}_${end}.csv`;
+  if (start) return `ledger_from-${start}.csv`;
+  if (end) return `ledger_to-${end}.csv`;
+  return `ledger_${new Date().toISOString().slice(0, 10)}.csv`;
 }

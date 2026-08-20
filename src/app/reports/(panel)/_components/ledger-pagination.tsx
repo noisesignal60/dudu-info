@@ -10,10 +10,12 @@ import {
 
 type Props = {
   basePath: string; // /reports
-  // 目前的 searchParams（含 dept/year/sort/page），換頁時原樣保留其餘篩選鍵
+  // 目前的 searchParams（含 dept/year/from/to/sort/page），換頁時原樣保留其餘篩選鍵
   searchParams: {
     dept?: string;
     year?: string;
+    from?: string;
+    to?: string;
     sort?: string;
     page?: string;
     q?: string;

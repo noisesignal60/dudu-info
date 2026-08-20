@@ -12,6 +12,10 @@ export function ExportCsvButton({
     year?: number;
     month?: number;
     quarter?: number;
+    /** 自訂區間起日（含當日）ISO YYYY-MM-DD；與 year 互斥 */
+    from?: string;
+    /** 自訂區間訖日（含當日）ISO YYYY-MM-DD；與 year 互斥 */
+    to?: string;
     q?: string;
   };
 }) {
